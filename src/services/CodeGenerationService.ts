@@ -207,4 +207,116 @@ export class CodeGenerationService {
 
     return finalArtifact;
   }
+
+  async generateFilesFromArchitecture(architecture: string, constraints?: string[]): Promise<CodeArtifact | null> {
+    if (this.providers.length === 0) {
+      toast({
+        title: "No Providers Available",
+        description: "Add at least one AI provider to generate code.",
+        variant: "destructive"
+      });
+      return null;
+    }
+
+    try {
+      // Initialize providers
+      await Promise.all(
+        this.providers.map(provider => provider.initialize())
+      );
+      
+      // Parse the architecture to identify components/modules
+      const lines = architecture.split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0 && !line.startsWith('#') && !line.startsWith('//'));
+      
+      const files: Record<string, string> = {};
+      
+      // Process each architecture line
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        
+        // Skip empty lines
+        if (!line.trim()) continue;
+        
+        const result = await this.circuitBreaker.execute(async () => {
+          const blueprint: PromptBlueprint = {
+            context: `Architecture line: ${line}\n\nFull context: ${architecture}`,
+            stage: 'implementation',
+            requirements: [],
+            constraints: {
+              line: i + 1,
+              totalLines: lines.length,
+              additionalConstraints: constraints
+            }
+          };
+          
+          const prompt = this.promptService.composePrompt(blueprint);
+          
+          for (const provider of this.providers) {
+            try {
+              toast({
+                title: "Generating File",
+                description: `Processing architecture line ${i + 1}/${lines.length}`,
+              });
+              
+              const generationStream = provider.generate(blueprint);
+              let fullResponse = '';
+              
+              for await (const chunk of generationStream) {
+                fullResponse += chunk.content;
+              }
+              
+              if (provider.validateResponse(fullResponse)) {
+                // Parse the code blocks from response
+                const generatedFiles = this.codeParser.parseCodeBlocks(fullResponse);
+                
+                // Add to our files collection
+                Object.assign(files, generatedFiles);
+                
+                return true;
+              }
+            } catch (error) {
+              console.warn(`Provider ${provider.constructor.name} failed for line ${i + 1}:`, error);
+            }
+          }
+          
+          return false;
+        });
+        
+        if (!result) {
+          toast({
+            title: "Generation Failed",
+            description: `Failed to generate code for line ${i + 1}: ${line}`,
+            variant: "destructive"
+          });
+        }
+      }
+      
+      if (Object.keys(files).length === 0) {
+        toast({
+          title: "No Files Generated",
+          description: "The process did not generate any valid files.",
+          variant: "destructive"
+        });
+        return null;
+      }
+      
+      return {
+        files,
+        metadata: {
+          generatedAt: new Date(),
+          providerUsed: this.providers.map(p => p.constructor.name).join(", "),
+          stage: 'implementation'
+        }
+      };
+    } catch (error) {
+      console.error("Architecture-based generation failed:", error);
+      toast({
+        title: "Generation Error",
+        description: "Failed to process the architecture and generate files.",
+        variant: "destructive"
+      });
+      return null;
+    }
+  }
 }
