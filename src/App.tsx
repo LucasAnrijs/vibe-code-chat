@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Curriculum from "./pages/Curriculum";
 import GitHubEditor from "./pages/GitHubEditor";
+import AgentBuilder from "./pages/AgentBuilder";
 import NotFound from "./pages/NotFound";
 import LearningProgress from "@/components/LearningProgress";
 
@@ -23,6 +24,7 @@ const App = () => (
           <Route path="/curriculum" element={<Curriculum />} />
           <Route path="/github-editor" element={<GitHubEditor />} />
           <Route path="/progress" element={<LearningProgress />} />
+          <Route path="/agent-builder" element={<AgentBuilder />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
