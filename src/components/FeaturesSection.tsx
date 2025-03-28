@@ -1,5 +1,5 @@
 
-import { MessageCircle, Code, LightBulb, Book, Users, Play } from "lucide-react";
+import { MessageCircle, Code, Lightbulb, Book, Users, Play } from "lucide-react";
 
 const features = [
   {
@@ -13,7 +13,7 @@ const features = [
     description: "See, edit and run real code examples right in the chat interface."
   },
   {
-    icon: <LightBulb className="h-6 w-6 text-vibe-purple" />,
+    icon: <Lightbulb className="h-6 w-6 text-vibe-purple" />,
     title: "Personalized Learning Path",
     description: "Our AI adapts to your skill level and learning style for maximum effectiveness."
   },

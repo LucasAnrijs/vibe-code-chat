@@ -1,5 +1,4 @@
-
-import { GraduationCap, Mail, GitHub, Twitter } from "lucide-react";
+import { GraduationCap, Mail, Github, Twitter } from "lucide-react";
 
 const Footer = () => {
   return (
@@ -19,7 +18,7 @@ const Footer = () => {
                 <Twitter className="h-5 w-5" />
               </a>
               <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                <GitHub className="h-5 w-5" />
+                <Github className="h-5 w-5" />
               </a>
               <a href="#" className="text-gray-400 hover:text-white transition-colors">
                 <Mail className="h-5 w-5" />
