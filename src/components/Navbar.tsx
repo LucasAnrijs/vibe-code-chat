@@ -1,146 +1,161 @@
 
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
-import { Menu, X, Code, BookOpen, Github, Wand2 } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from "@/components/ui/navigation-menu";
+import { cn } from "@/lib/utils";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Menu, X, Github, BookOpen, Code, Brain, Wand2, FolderTree } from "lucide-react";
+import { useMobileDetect } from '@/hooks/use-mobile';
 
 const Navbar = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const isMobile = useMobileDetect();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
 
-  const isActive = (path: string) => location.pathname === path;
+  // Close the mobile menu when location changes
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location]);
 
   return (
-    <nav className="bg-white shadow-sm py-4 fixed top-0 left-0 right-0 z-50">
-      <div className="container mx-auto px-4 md:px-6 flex justify-between items-center">
-        <div className="flex items-center">
-          <Link to="/" className="text-vibe-purple font-bold text-xl">VibeCode</Link>
-        </div>
-
-        {/* Desktop navigation */}
-        <div className="hidden md:flex items-center space-x-8">
-          <Link 
-            to="/" 
-            className={`flex items-center gap-2 text-vibe-dark hover:text-vibe-purple transition-colors ${
-              isActive("/") ? "text-vibe-purple font-medium" : ""
-            }`}
+    <div className="fixed top-0 left-0 z-50 w-full bg-white shadow-sm">
+      <div className="container flex items-center justify-between h-16 mx-auto">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="md:hidden"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
-            <Code size={18} />
-            Home
-          </Link>
-          <Link 
-            to="/curriculum" 
-            className={`flex items-center gap-2 text-vibe-dark hover:text-vibe-purple transition-colors ${
-              isActive("/curriculum") ? "text-vibe-purple font-medium" : ""
-            }`}
-          >
-            <BookOpen size={18} />
-            Curriculum
-          </Link>
-          <Link 
-            to="/github-editor" 
-            className={`flex items-center gap-2 text-vibe-dark hover:text-vibe-purple transition-colors ${
-              isActive("/github-editor") ? "text-vibe-purple font-medium" : ""
-            }`}
-          >
-            <Github size={18} />
-            GitHub Editor
-          </Link>
-          <Link 
-            to="/prompt-designer" 
-            className={`flex items-center gap-2 text-vibe-dark hover:text-vibe-purple transition-colors ${
-              isActive("/prompt-designer") ? "text-vibe-purple font-medium" : ""
-            }`}
-          >
-            <Wand2 size={18} />
-            Prompt Designer
-          </Link>
-          <a href="#pricing" className="text-vibe-dark hover:text-vibe-purple transition-colors">
-            Pricing
-          </a>
-        </div>
-
-        <div className="hidden md:flex items-center space-x-4">
-          <Button variant="outline" className="border-vibe-purple text-vibe-purple hover:bg-vibe-purple hover:text-white">
-            Log in
+            {mobileMenuOpen ? <X /> : <Menu />}
           </Button>
-          <Button className="bg-vibe-purple hover:bg-vibe-purple/90 text-white">
-            Start Free Trial
+          <Button variant="ghost" onClick={() => navigate("/")}>
+            <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-vibe-purple to-vibe-pink">
+              Lovable AI
+            </span>
           </Button>
         </div>
 
-        {/* Mobile menu button */}
-        <button 
-          className="md:hidden text-vibe-dark"
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-        >
-          {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
+        <div className={cn("transition-all md:flex", isMobile ? (mobileMenuOpen ? "block absolute top-16 left-0 w-full bg-white shadow-md z-50" : "hidden") : "")}>
+          <NavigationMenu>
+            <NavigationMenuList className={cn(isMobile && "flex-col w-full")}>
+              <NavigationMenuItem>
+                <NavigationMenuLink
+                  className={navigationMenuTriggerStyle()}
+                  onClick={() => navigate("/curriculum")}
+                >
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  Curriculum
+                </NavigationMenuLink>
+              </NavigationMenuItem>
+
+              <NavigationMenuItem>
+                <NavigationMenuLink
+                  className={navigationMenuTriggerStyle()}
+                  onClick={() => navigate("/github-editor")}
+                >
+                  <Github className="w-4 h-4 mr-2" />
+                  GitHub
+                </NavigationMenuLink>
+              </NavigationMenuItem>
+
+              <NavigationMenuItem>
+                <NavigationMenuTrigger>
+                  <Brain className="w-4 h-4 mr-2" />
+                  AI Tools
+                </NavigationMenuTrigger>
+                <NavigationMenuContent>
+                  <ul className="grid gap-3 p-4 md:w-[400px] lg:w-[500px] lg:grid-cols-2">
+                    <ListItem
+                      href="/agent-builder"
+                      title="Agent Builder"
+                      icon={<Code className="w-4 h-4 mr-2" />}
+                    >
+                      Build and deploy custom AI agents with specialized capabilities
+                    </ListItem>
+                    <ListItem
+                      href="/prompt-designer"
+                      title="Prompt Designer"
+                      icon={<Wand2 className="w-4 h-4 mr-2" />}
+                    >
+                      Design and refine prompts for generating code
+                    </ListItem>
+                    <ListItem
+                      href="/architecture-generator"
+                      title="Architecture Generator"
+                      icon={<FolderTree className="w-4 h-4 mr-2" />}
+                    >
+                      Convert architecture into working applications
+                    </ListItem>
+                  </ul>
+                </NavigationMenuContent>
+              </NavigationMenuItem>
+            </NavigationMenuList>
+          </NavigationMenu>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate("/progress")}
+          >
+            My Progress
+          </Button>
+          <Button 
+            onClick={() => navigate("/agent-builder")}
+            className="hidden md:flex"
+          >
+            <Brain className="w-4 h-4 mr-2" />
+            AI Studio
+          </Button>
+        </div>
       </div>
+    </div>
+  );
+};
 
-      {/* Mobile navigation */}
-      {isMenuOpen && (
-        <div className="md:hidden px-4 py-4 bg-white border-t">
-          <div className="flex flex-col space-y-3">
-            <Link 
-              to="/" 
-              className={`flex items-center gap-2 text-vibe-dark hover:text-vibe-purple transition-colors py-2 ${
-                isActive("/") ? "text-vibe-purple font-medium" : ""
-              }`}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              <Code size={18} />
-              Home
-            </Link>
-            <Link 
-              to="/curriculum" 
-              className={`flex items-center gap-2 text-vibe-dark hover:text-vibe-purple transition-colors py-2 ${
-                isActive("/curriculum") ? "text-vibe-purple font-medium" : ""
-              }`}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              <BookOpen size={18} />
-              Curriculum
-            </Link>
-            <Link 
-              to="/github-editor" 
-              className={`flex items-center gap-2 text-vibe-dark hover:text-vibe-purple transition-colors py-2 ${
-                isActive("/github-editor") ? "text-vibe-purple font-medium" : ""
-              }`}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              <Github size={18} />
-              GitHub Editor
-            </Link>
-            <Link 
-              to="/prompt-designer" 
-              className={`flex items-center gap-2 text-vibe-dark hover:text-vibe-purple transition-colors py-2 ${
-                isActive("/prompt-designer") ? "text-vibe-purple font-medium" : ""
-              }`}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              <Wand2 size={18} />
-              Prompt Designer
-            </Link>
-            <a 
-              href="#pricing" 
-              className="text-vibe-dark hover:text-vibe-purple transition-colors py-2"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Pricing
-            </a>
-            <div className="flex flex-col space-y-2 pt-2">
-              <Button variant="outline" className="border-vibe-purple text-vibe-purple hover:bg-vibe-purple hover:text-white w-full">
-                Log in
-              </Button>
-              <Button className="bg-vibe-purple hover:bg-vibe-purple/90 text-white w-full">
-                Start Free Trial
-              </Button>
-            </div>
-          </div>
+const ListItem = ({
+  className,
+  title,
+  children,
+  href,
+  icon,
+  ...props
+}: {
+  className?: string;
+  title: string;
+  children: React.ReactNode;
+  href: string;
+  icon?: React.ReactNode;
+}) => {
+  const navigate = useNavigate();
+  
+  return (
+    <li className={cn("block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground", className)}>
+      <div 
+        className="cursor-pointer"
+        onClick={() => navigate(href)}
+        {...props}
+      >
+        <div className="flex items-center text-sm font-medium leading-none">
+          {icon}
+          {title}
         </div>
-      )}
-    </nav>
+        <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+          {children}
+        </p>
+      </div>
+    </li>
   );
 };
 
