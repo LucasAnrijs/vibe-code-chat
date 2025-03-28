@@ -1,6 +1,5 @@
-
 export type ProviderType = 'openai' | 'anthropic' | 'local';
-export type GenerationStage = 'analysis' | 'architecture' | 'implementation' | 'validation' | 'optimization';
+export type GenerationStage = 'analysis' | 'architecture' | 'implementation' | 'implementation_with_context' | 'validation' | 'optimization';
 
 export interface ProviderConfig {
   type: ProviderType;

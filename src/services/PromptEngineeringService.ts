@@ -64,7 +64,7 @@ export class PromptEngineeringService {
 
   composePrompt(blueprint: PromptBlueprint): string {
     // Get the template based on the stage, handle implementation_with_context specially
-    let templateKey = blueprint.stage;
+    let templateKey: GenerationStage = blueprint.stage;
     if (blueprint.constraints && blueprint.constraints.filesContext) {
       templateKey = 'implementation_with_context';
     }
