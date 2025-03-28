@@ -8,8 +8,10 @@ import RepoExplorer from "@/components/RepoExplorer";
 import CodeEditor from "@/components/CodeEditor";
 import GitHubAssistant from "@/components/GitHubAssistant";
 import RepoRAGBuilder from "@/components/RepoRAGBuilder";
+import GitHubAchievements from "@/components/gamification/GitHubAchievements";
 import { toast } from "@/hooks/use-toast";
-import { Github, ExternalLink, Lock, MessageSquare, Code, Database } from "lucide-react";
+import { Github, ExternalLink, Lock, MessageSquare, Code, Database, Trophy } from "lucide-react";
+import { Achievement } from "@/lib/achievement-types";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +33,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -51,6 +59,8 @@ const GitHubEditor = () => {
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [showAssistant, setShowAssistant] = useState(false);
   const [showRagBuilder, setShowRagBuilder] = useState(false);
+  const [showAchievements, setShowAchievements] = useState(false);
+  const [selectedTab, setSelectedTab] = useState<string>("explorer");
 
   const form = useForm<z.infer<typeof tokenSchema>>({
     resolver: zodResolver(tokenSchema),
@@ -149,6 +159,18 @@ const GitHubEditor = () => {
     setShowRagBuilder(!showRagBuilder);
   };
 
+  const toggleAchievements = () => {
+    setShowAchievements(!showAchievements);
+  };
+
+  const handleAchievementUnlocked = (achievement: Achievement) => {
+    console.log("Achievement unlocked:", achievement.title);
+    toast({
+      title: "Achievement Unlocked! 🏆",
+      description: `${achievement.title}: ${achievement.description}`,
+    });
+  };
+
   return (
     <div className="min-h-screen flex flex-col overflow-auto">
       <Navbar />
@@ -188,6 +210,16 @@ const GitHubEditor = () => {
                   >
                     <MessageSquare className="mr-2 h-4 w-4" />
                     {showAssistant ? "Hide Assistant" : "Show Assistant"}
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={toggleAchievements}
+                    className={showAchievements ? "bg-yellow-100" : ""}
+                  >
+                    <Trophy className="mr-2 h-4 w-4" />
+                    {showAchievements ? "Hide Achievements" : "Achievements"}
                   </Button>
                   
                   {repo && showAssistant && (
@@ -247,26 +279,52 @@ const GitHubEditor = () => {
             
             {repo && (
               <div className={`grid gap-6 h-[70vh] overflow-auto ${
-                showAssistant && showRagBuilder 
+                showAssistant && showRagBuilder && showAchievements
                   ? 'grid-cols-1 md:grid-cols-12' 
-                  : showAssistant 
-                    ? 'grid-cols-1 md:grid-cols-4' 
-                    : 'grid-cols-1 md:grid-cols-3'
+                  : showAssistant && showAchievements
+                    ? 'grid-cols-1 md:grid-cols-12'
+                    : showAssistant && showRagBuilder
+                      ? 'grid-cols-1 md:grid-cols-12' 
+                      : showAssistant 
+                        ? 'grid-cols-1 md:grid-cols-4' 
+                        : showAchievements
+                          ? 'grid-cols-1 md:grid-cols-4'
+                          : 'grid-cols-1 md:grid-cols-3'
               }`}>
-                <div className="md:col-span-1">
-                  <RepoExplorer 
-                    repo={repo} 
-                    onFileSelect={handleFileSelect}
-                    auth={auth}
-                  />
+                <div className={`md:col-span-1 ${showAchievements ? 'md:hidden lg:block' : ''}`}>
+                  <Tabs value={selectedTab} onValueChange={setSelectedTab} className="h-full flex flex-col">
+                    <TabsList className="grid grid-cols-2">
+                      <TabsTrigger value="explorer">Files</TabsTrigger>
+                      <TabsTrigger value="achievements">Trophies</TabsTrigger>
+                    </TabsList>
+                    <div className="flex-grow overflow-auto">
+                      <TabsContent value="explorer" className="h-full mt-0">
+                        <RepoExplorer 
+                          repo={repo} 
+                          onFileSelect={handleFileSelect}
+                          auth={auth}
+                        />
+                      </TabsContent>
+                      <TabsContent value="achievements" className="h-full mt-0 md:hidden">
+                        <GitHubAchievements 
+                          repo={repo}
+                          onAchievementUnlocked={handleAchievementUnlocked}
+                        />
+                      </TabsContent>
+                    </div>
+                  </Tabs>
                 </div>
                 
                 <div className={`${
-                  showAssistant && showRagBuilder
-                    ? 'md:col-span-7'
-                    : showAssistant
-                      ? 'md:col-span-2'
-                      : 'md:col-span-2'
+                  showAssistant && showRagBuilder && showAchievements
+                    ? 'md:col-span-6'
+                    : showAssistant && (showRagBuilder || showAchievements)
+                      ? 'md:col-span-7'
+                      : showAssistant
+                        ? 'md:col-span-2'
+                        : showAchievements
+                          ? 'md:col-span-2'
+                          : 'md:col-span-2'
                 } overflow-auto`}>
                   <CodeEditor 
                     repo={repo} 
@@ -276,17 +334,33 @@ const GitHubEditor = () => {
                   />
                 </div>
                 
-                {showAssistant && (
-                  <div className={`${showRagBuilder ? 'md:col-span-3' : 'md:col-span-1'} overflow-auto space-y-6`}>
-                    {showRagBuilder && (
+                {(showAssistant || showAchievements) && (
+                  <div className={`${
+                    showAssistant && showRagBuilder && showAchievements 
+                      ? 'md:col-span-5' 
+                      : showAssistant && (showRagBuilder || showAchievements)
+                        ? 'md:col-span-4'
+                        : 'md:col-span-1'
+                  } overflow-auto space-y-6`}>
+                    {showRagBuilder && showAssistant && (
                       <RepoRAGBuilder repo={repo} auth={auth} />
                     )}
-                    <GitHubAssistant 
-                      repoName={repo ? `${repo.owner}/${repo.repo}` : ""} 
-                      currentFile={selectedFile?.name || null}
-                      fileContent={fileContent}
-                      repo={repo}
-                    />
+                    
+                    {showAssistant && (
+                      <GitHubAssistant 
+                        repoName={repo ? `${repo.owner}/${repo.repo}` : ""} 
+                        currentFile={selectedFile?.name || null}
+                        fileContent={fileContent}
+                        repo={repo}
+                      />
+                    )}
+                    
+                    {showAchievements && selectedTab !== "achievements" && (
+                      <GitHubAchievements 
+                        repo={repo}
+                        onAchievementUnlocked={handleAchievementUnlocked}
+                      />
+                    )}
                   </div>
                 )}
               </div>

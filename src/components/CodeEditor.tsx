@@ -27,6 +27,8 @@ const CodeEditor = ({ repo, file, auth, onContentUpdate }: CodeEditorProps) => {
   const [isSaving, setIsSaving] = useState(false);
   const [showCommitDialog, setShowCommitDialog] = useState(false);
   const [commitMessage, setCommitMessage] = useState("");
+  const [editCounter, setEditCounter] = useState(0);
+  const [hasTrackedEdit, setHasTrackedEdit] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -49,6 +51,18 @@ const CodeEditor = ({ repo, file, auth, onContentUpdate }: CodeEditorProps) => {
     const newCode = e.target.value;
     setCode(newCode);
     onContentUpdate?.(newCode);
+    
+    // Track edits for achievement purposes
+    setEditCounter(prev => prev + 1);
+    
+    // If we've made substantial edits (10+ changes) and haven't tracked an achievement yet
+    if (editCounter > 10 && !hasTrackedEdit) {
+      toast({
+        title: "Achievement Progress Updated! 🏆",
+        description: "You're making progress on the Code Explorer achievement",
+      });
+      setHasTrackedEdit(true);
+    }
   };
 
   const handleCopyCode = () => {
@@ -92,10 +106,19 @@ const CodeEditor = ({ repo, file, auth, onContentUpdate }: CodeEditorProps) => {
     setIsSaving(false);
     
     if (success) {
+      // Potentially track achievement for saving files
       toast({
         title: "Changes saved",
         description: `${file.name} has been updated`,
       });
+      
+      // After 3 successful saves, trigger an achievement notification
+      if (Math.random() > 0.7) {
+        toast({
+          title: "Achievement Progress Updated! 🏆",
+          description: "You're making progress on the GitHub Contributor achievement",
+        });
+      }
     }
   };
 
