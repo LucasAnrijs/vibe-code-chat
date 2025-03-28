@@ -10,9 +10,9 @@ const testimonials = [
     avatar: "AJ"
   },
   {
-    quote: "After trying countless coding platforms, VibeCode was the one that finally helped me break through. It's like having a patient tutor available 24/7.",
+    quote: "After trying countless coding platforms, VibeCode was the one that finally helped me break through for real. It's like having a patient tutor available 24/7.",
     name: "Samantha Park",
-    role: "UX Designer",
+    role: "UI Designer",
     avatar: "SP"
   },
   {
