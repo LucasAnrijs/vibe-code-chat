@@ -1,3 +1,4 @@
+
 import { LLMProvider, ProviderConfig, PromptBlueprint, PromptChunk } from "@/lib/agent-types";
 import { toast } from "@/hooks/use-toast";
 
@@ -34,8 +35,8 @@ export class AnthropicProvider extends LLMProvider {
               content: fullPrompt
             }
           ],
-          max_tokens: 2000,
-          temperature: 0.2
+          max_tokens: prompt.constraints.maxTokens ?? 2000,
+          temperature: prompt.constraints.temperature ?? 0.2
         }),
       });
 
