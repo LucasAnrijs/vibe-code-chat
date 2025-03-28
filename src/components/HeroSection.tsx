@@ -2,13 +2,14 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, GraduationCap, ArrowRight } from "lucide-react";
-import ChatMessage from "@/components/ChatMessage";
+import ChatMessageComponent from "@/components/ChatMessage";
 import ChatInput from "@/components/ChatInput";
 import ApiKeyInput from "@/components/ApiKeyInput";
-import { chatWithLLM, type ChatMessage } from "@/services/chatService";
+import CodeSnippetTester from "@/components/CodeSnippetTester";
+import { chatWithLLM, type ChatMessage as ChatMessageType } from "@/services/chatService";
 
 const HeroSection = () => {
-  const [messages, setMessages] = useState<ChatMessage[]>([
+  const [messages, setMessages] = useState<ChatMessageType[]>([
     {
       role: "assistant",
       content: "Let's learn how to create a function in JavaScript. What's your coding experience?"
@@ -34,7 +35,7 @@ const HeroSection = () => {
     if (!apiKey) return;
     
     // Add user message to chat
-    const userMessage: ChatMessage = { role: "user", content };
+    const userMessage: ChatMessageType = { role: "user", content };
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
     
@@ -46,7 +47,7 @@ const HeroSection = () => {
       const response = await chatWithLLM(messageHistory, apiKey);
       
       // Add assistant response to chat
-      const assistantMessage: ChatMessage = { role: "assistant", content: response };
+      const assistantMessage: ChatMessageType = { role: "assistant", content: response };
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
       console.error("Error sending message:", error);
@@ -77,8 +78,9 @@ const HeroSection = () => {
             <div className="text-sm text-gray-500 pt-4">No credit card required</div>
           </div>
 
-          <div className="flex-1 relative">
-            <div className="bg-white rounded-xl shadow-xl border border-gray-200 p-6 max-w-md mx-auto lg:ml-auto transform hover:scale-105 transition-all duration-300 hover:shadow-2xl">
+          <div className="flex-1 relative flex flex-col md:flex-row gap-6 items-center justify-center">
+            {/* Chat Component */}
+            <div className="bg-white rounded-xl shadow-xl border border-gray-200 p-6 max-w-md w-full transform hover:scale-105 transition-all duration-300 hover:shadow-2xl">
               <div className="flex items-center space-x-3 mb-4">
                 <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                 <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
@@ -90,7 +92,7 @@ const HeroSection = () => {
               
               <div className="space-y-4 max-h-[300px] overflow-y-auto mb-4">
                 {messages.map((message, index) => (
-                  <ChatMessage key={index} message={message} />
+                  <ChatMessageComponent key={index} message={message} />
                 ))}
                 
                 {isLoading && (
@@ -117,9 +119,12 @@ const HeroSection = () => {
               />
               
               <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 bg-vibe-purple text-white px-4 py-1 rounded-full text-sm font-medium shadow-lg">
-                Interactive Live Demo
+                Interactive Chat
               </div>
             </div>
+
+            {/* Code Snippet Tester */}
+            <CodeSnippetTester />
             
             <div className="hidden lg:block absolute -z-10 right-5 -bottom-10 w-64 h-64 bg-purple-100 rounded-full blur-3xl opacity-70"></div>
             <div className="hidden lg:block absolute -z-10 right-20 -top-10 w-64 h-64 bg-blue-100 rounded-full blur-3xl opacity-70"></div>
