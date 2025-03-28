@@ -8,7 +8,7 @@ import Navbar from "@/components/Navbar";
 import { CodeGenerationService } from "@/services/CodeGenerationService";
 import { OpenAIProvider } from "@/services/llm-providers/OpenAIProvider";
 import { AnthropicProvider } from "@/services/llm-providers/AnthropicProvider";
-import { Copy, Play, Folder, FolderTree, Eye, FileCode, Loader } from "lucide-react";
+import { Copy, Play, Folder, FolderTree, Eye, FileCode, Loader, Database } from "lucide-react";
 import ArchitectureInput from "@/components/architecture-generator/ArchitectureInput";
 import AppPreview from "@/components/architecture-generator/AppPreview";
 import GeneratedCodeViewer from "@/components/architecture-generator/GeneratedCodeViewer";
@@ -52,6 +52,28 @@ const ArchitectureGenerator = () => {
       // Initialize code generation service
       const codeGenerationService = new CodeGenerationService([llmProvider]);
       
+      // Get database context if available
+      const databaseSchema = localStorage.getItem('database_schema');
+      const databaseType = localStorage.getItem('database_type');
+      
+      // Add constraints based on database if we have one
+      const constraints = [
+        'Generate complete implementation files for each component in the architecture',
+        'Ensure each component is functional and imports any dependencies it needs',
+        'Add appropriate TypeScript types and interfaces',
+        'Create a cohesive application that demonstrates the architecture'
+      ];
+      
+      if (databaseSchema) {
+        constraints.push(`Integrate with ${databaseType} database`);
+        constraints.push('Include database models and API route handlers');
+        
+        toast({
+          title: "Database Integration",
+          description: `Generating application with ${databaseType} database integration`
+        });
+      }
+      
       toast({
         title: "Generation Started",
         description: "Generating application from architecture structure..."
@@ -60,12 +82,7 @@ const ArchitectureGenerator = () => {
       // Generate implementation from architecture
       const artifact = await codeGenerationService.generateFilesFromArchitecture(
         architecture,
-        [
-          'Generate complete implementation files for each component in the architecture',
-          'Ensure each component is functional and imports any dependencies it needs',
-          'Add appropriate TypeScript types and interfaces',
-          'Create a cohesive application that demonstrates the architecture'
-        ]
+        constraints
       );
       
       if (artifact) {
@@ -109,7 +126,7 @@ const ArchitectureGenerator = () => {
         </div>
         
         <p className="text-gray-600 mb-8">
-          Transform an application architecture structure into a fully functional React TypeScript application.
+          Transform an application architecture structure into a fully functional React TypeScript application with database integration.
         </p>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -136,7 +153,7 @@ const ArchitectureGenerator = () => {
                   Project Architecture
                 </CardTitle>
                 <CardDescription>
-                  Provide your project architecture as a directory structure. Each line will be processed into components.
+                  Provide your project architecture as a directory structure and optional database schema.
                 </CardDescription>
               </CardHeader>
               <CardContent>

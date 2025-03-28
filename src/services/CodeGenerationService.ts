@@ -231,6 +231,15 @@ export class CodeGenerationService {
       
       const files: Record<string, string> = {};
       
+      // Get database schema if available
+      const databaseSchema = localStorage.getItem('database_schema');
+      const databaseType = localStorage.getItem('database_type') || 'prisma';
+      
+      // Generate database files first if schema exists
+      if (databaseSchema) {
+        await this.generateDatabaseFiles(databaseSchema, databaseType, files);
+      }
+      
       // Process each architecture line
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
@@ -238,15 +247,26 @@ export class CodeGenerationService {
         // Skip empty lines
         if (!line.trim()) continue;
         
+        // Skip database files that we've already generated
+        if ((line.includes('/db/') || line.includes('/prisma/')) && databaseSchema) {
+          continue;
+        }
+        
         const result = await this.circuitBreaker.execute(async () => {
+          // Add database context to the blueprint if we have schema
+          const dbContext = databaseSchema ? 
+            `\n\nDatabase Schema: ${databaseSchema}\nDatabase Type: ${databaseType}` : '';
+            
           const blueprint: PromptBlueprint = {
-            context: `Architecture line: ${line}\n\nFull context: ${architecture}`,
+            context: `Architecture line: ${line}\n\nFull context: ${architecture}${dbContext}`,
             stage: 'implementation',
             requirements: [],
             constraints: {
               line: i + 1,
               totalLines: lines.length,
-              additionalConstraints: constraints
+              additionalConstraints: constraints,
+              databaseType: databaseType,
+              hasDatabaseSchema: !!databaseSchema
             }
           };
           
@@ -317,6 +337,134 @@ export class CodeGenerationService {
         variant: "destructive"
       });
       return null;
+    }
+  }
+
+  private async generateDatabaseFiles(
+    schema: string, 
+    dbType: string, 
+    targetFiles: Record<string, string>
+  ): Promise<boolean> {
+    try {
+      toast({
+        title: "Generating Database",
+        description: "Creating database schema and models...",
+      });
+      
+      for (const provider of this.providers) {
+        try {
+          // Create specific DB generation prompts based on db type
+          const dbBlueprint: PromptBlueprint = {
+            context: `Generate database files for:\n${schema}\n\nUsing database type: ${dbType}`,
+            stage: 'implementation',
+            requirements: [],
+            constraints: {
+              databaseType: dbType,
+              task: "generate_database_files"
+            }
+          };
+          
+          // For Prisma specifically, generate schema.prisma
+          if (dbType === 'prisma') {
+            const prismaBlueprint: PromptBlueprint = {
+              context: `Convert this schema definition to a Prisma schema file:\n${schema}`,
+              stage: 'implementation',
+              requirements: [],
+              constraints: {
+                databaseType: "prisma",
+                task: "generate_prisma_schema"
+              }
+            };
+            
+            const generationStream = provider.generate(prismaBlueprint);
+            let fullResponse = '';
+            
+            for await (const chunk of generationStream) {
+              fullResponse += chunk.content;
+            }
+            
+            if (provider.validateResponse(fullResponse)) {
+              const generatedFiles = this.codeParser.parseCodeBlocks(fullResponse);
+              Object.assign(targetFiles, generatedFiles);
+              
+              // Also generate the client file
+              const clientBlueprint: PromptBlueprint = {
+                context: `Generate a Prisma client setup file based on this schema:\n${schema}`,
+                stage: 'implementation',
+                requirements: [],
+                constraints: {
+                  databaseType: "prisma",
+                  task: "generate_prisma_client"
+                }
+              };
+              
+              const clientStream = provider.generate(clientBlueprint);
+              let clientResponse = '';
+              
+              for await (const chunk of clientStream) {
+                clientResponse += chunk.content;
+              }
+              
+              if (provider.validateResponse(clientResponse)) {
+                const clientFiles = this.codeParser.parseCodeBlocks(clientResponse);
+                Object.assign(targetFiles, clientFiles);
+              }
+            }
+          } else {
+            // For MongoDB or TypeORM
+            const generationStream = provider.generate(dbBlueprint);
+            let fullResponse = '';
+            
+            for await (const chunk of generationStream) {
+              fullResponse += chunk.content;
+            }
+            
+            if (provider.validateResponse(fullResponse)) {
+              const generatedFiles = this.codeParser.parseCodeBlocks(fullResponse);
+              Object.assign(targetFiles, generatedFiles);
+            }
+          }
+          
+          // Also generate sample API routes for the models
+          const apiBlueprint: PromptBlueprint = {
+            context: `Generate RESTful API route handlers for this schema:\n${schema}\n\nUsing database type: ${dbType}`,
+            stage: 'implementation',
+            requirements: [],
+            constraints: {
+              databaseType: dbType,
+              task: "generate_api_routes"
+            }
+          };
+          
+          const apiStream = provider.generate(apiBlueprint);
+          let apiResponse = '';
+          
+          for await (const chunk of apiStream) {
+            apiResponse += chunk.content;
+          }
+          
+          if (provider.validateResponse(apiResponse)) {
+            const apiFiles = this.codeParser.parseCodeBlocks(apiResponse);
+            Object.assign(targetFiles, apiFiles);
+          }
+          
+          return true;
+        } catch (error) {
+          console.warn(`Provider ${provider.constructor.name} failed for database generation:`, error);
+          // Continue with next provider
+        }
+      }
+      
+      // If we got here, all providers failed
+      return false;
+    } catch (error) {
+      console.error("Database generation failed:", error);
+      toast({
+        title: "Database Generation Error",
+        description: "Failed to generate database files.",
+        variant: "destructive"
+      });
+      return false;
     }
   }
 }
