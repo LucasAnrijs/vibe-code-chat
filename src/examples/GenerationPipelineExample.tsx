@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -50,7 +49,6 @@ const GenerationPipelineExample: React.FC = () => {
     setResults({});
 
     try {
-      // Create provider instance
       let llmProvider;
       if (provider === 'openai') {
         llmProvider = new OpenAIProvider({ type: 'openai', apiKey });
@@ -58,7 +56,6 @@ const GenerationPipelineExample: React.FC = () => {
         llmProvider = new AnthropicProvider({ type: 'anthropic', apiKey });
       }
 
-      // Create pipeline
       const generationFlow = new GenerationPipeline({
         phases: [
           {
@@ -82,10 +79,8 @@ const GenerationPipelineExample: React.FC = () => {
         debugMode: true,
       });
 
-      // Register the provider
       generationFlow.registerProviders([llmProvider]);
 
-      // Execute the pipeline
       const result = await generationFlow.execute({
         userInput,
         styleGuide,
@@ -182,7 +177,7 @@ const GenerationPipelineExample: React.FC = () => {
                 </div>
               </div>
               
-              <Alert variant="info" className="bg-blue-50 border-blue-200">
+              <Alert className="bg-blue-50 border-blue-200">
                 <InfoIcon className="h-4 w-4" />
                 <AlertTitle>Tip</AlertTitle>
                 <AlertDescription>
