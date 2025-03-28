@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Curriculum from "./pages/Curriculum";
 import GitHubEditor from "./pages/GitHubEditor";
 import AgentBuilder from "./pages/AgentBuilder";
+import PromptDesigner from "./pages/PromptDesigner";
 import NotFound from "./pages/NotFound";
 import LearningProgress from "@/components/LearningProgress";
 
@@ -25,6 +26,7 @@ const App = () => (
           <Route path="/github-editor" element={<GitHubEditor />} />
           <Route path="/progress" element={<LearningProgress />} />
           <Route path="/agent-builder" element={<AgentBuilder />} />
+          <Route path="/prompt-designer" element={<PromptDesigner />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

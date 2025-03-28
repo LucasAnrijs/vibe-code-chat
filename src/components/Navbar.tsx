@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { Menu, X, Code, BookOpen, Github } from "lucide-react";
+import { Menu, X, Code, BookOpen, Github, Wand2 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 const Navbar = () => {
@@ -45,6 +45,15 @@ const Navbar = () => {
           >
             <Github size={18} />
             GitHub Editor
+          </Link>
+          <Link 
+            to="/prompt-designer" 
+            className={`flex items-center gap-2 text-vibe-dark hover:text-vibe-purple transition-colors ${
+              isActive("/prompt-designer") ? "text-vibe-purple font-medium" : ""
+            }`}
+          >
+            <Wand2 size={18} />
+            Prompt Designer
           </Link>
           <a href="#pricing" className="text-vibe-dark hover:text-vibe-purple transition-colors">
             Pricing
@@ -102,6 +111,16 @@ const Navbar = () => {
             >
               <Github size={18} />
               GitHub Editor
+            </Link>
+            <Link 
+              to="/prompt-designer" 
+              className={`flex items-center gap-2 text-vibe-dark hover:text-vibe-purple transition-colors py-2 ${
+                isActive("/prompt-designer") ? "text-vibe-purple font-medium" : ""
+              }`}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              <Wand2 size={18} />
+              Prompt Designer
             </Link>
             <a 
               href="#pricing" 
