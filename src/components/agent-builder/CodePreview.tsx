@@ -1,9 +1,9 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CodeArtifact } from "@/lib/agent-types";
-import { Copy, Download, Check, FileCode } from "lucide-react";
+import { Copy, Download, Check, FileCode, FileText } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface CodePreviewProps {
@@ -15,9 +15,13 @@ const CodePreview = ({ artifact }: CodePreviewProps) => {
   const [copied, setCopied] = useState(false);
 
   // Set the first file as active when artifact changes
-  if (artifact && Object.keys(artifact.files).length > 0 && !activeFile) {
-    setActiveFile(Object.keys(artifact.files)[0]);
-  }
+  useEffect(() => {
+    if (artifact && Object.keys(artifact.files).length > 0) {
+      setActiveFile(Object.keys(artifact.files)[0]);
+    } else {
+      setActiveFile(null);
+    }
+  }, [artifact]);
 
   const handleCopyCode = () => {
     if (!activeFile || !artifact) return;
@@ -56,6 +60,24 @@ const CodePreview = ({ artifact }: CodePreviewProps) => {
     }
   };
 
+  const handleDownloadAll = () => {
+    if (!artifact) return;
+    
+    // In a real implementation, this would create a zip file with all files
+    // For this example, we'll just show a toast message
+    toast({
+      title: "Download All",
+      description: "In a production app, this would download all files as a zip archive."
+    });
+  };
+
+  const getFileIcon = (filename: string) => {
+    if (filename.endsWith('.ts') || filename.endsWith('.js')) {
+      return <FileCode className="h-4 w-4" />;
+    }
+    return <FileText className="h-4 w-4" />;
+  };
+
   if (!artifact) {
     return (
       <div className="flex flex-col items-center justify-center p-12 text-center text-gray-500 border rounded-md">
@@ -91,24 +113,30 @@ const CodePreview = ({ artifact }: CodePreviewProps) => {
             )}
           </Button>
           
-          <Button variant="outline" size="sm" onClick={handleDownloadCode}>
+          <Button variant="outline" size="sm" onClick={handleDownloadCode} disabled={!activeFile}>
             <Download className="mr-2 h-4 w-4" />
-            Download
+            Download File
+          </Button>
+          
+          <Button variant="outline" size="sm" onClick={handleDownloadAll}>
+            <Download className="mr-2 h-4 w-4" />
+            Download All
           </Button>
         </div>
       </div>
       
       <div className="border rounded-md overflow-hidden">
         <Tabs value={activeFile || ""} onValueChange={setActiveFile}>
-          <div className="bg-gray-100 border-b px-4 py-2">
-            <TabsList className="bg-transparent">
+          <div className="bg-gray-100 border-b px-4 py-2 overflow-x-auto">
+            <TabsList className="bg-transparent inline-flex">
               {Object.keys(artifact.files).map((filename) => (
                 <TabsTrigger 
                   key={filename} 
                   value={filename}
-                  className="data-[state=active]:bg-white"
+                  className="data-[state=active]:bg-white flex items-center"
                 >
-                  {filename}
+                  {getFileIcon(filename)}
+                  <span className="ml-2">{filename}</span>
                 </TabsTrigger>
               ))}
             </TabsList>

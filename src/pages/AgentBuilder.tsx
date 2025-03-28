@@ -9,6 +9,9 @@ import CodePreview from "@/components/agent-builder/CodePreview";
 import TestingPanel from "@/components/agent-builder/TestingPanel";
 import { ProviderConfig, CodeArtifact } from "@/lib/agent-types";
 import { toast } from "@/hooks/use-toast";
+import { OpenAIProvider } from "@/services/llm-providers/OpenAIProvider";
+import { AnthropicProvider } from "@/services/llm-providers/AnthropicProvider";
+import { CodeGenerationService } from "@/services/CodeGenerationService";
 
 const AgentBuilder = () => {
   const [activeTab, setActiveTab] = useState("configure");
@@ -45,75 +48,66 @@ const AgentBuilder = () => {
       return;
     }
 
+    if (!prompt.specification.trim()) {
+      toast({
+        title: "Empty Specification",
+        description: "Please enter a specification for code generation.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsGenerating(true);
     
     try {
-      // This would connect to your actual code generation service
-      // For demo purposes, we'll simulate a response after a delay
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      const mockArtifact: CodeArtifact = {
-        files: {
-          "UserController.ts": `import { Request, Response } from 'express';
-import { z } from 'zod';
-import jwt from 'jsonwebtoken';
-import { prisma } from '../lib/prisma';
-
-const UserSchema = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
-  password: z.string().min(8)
-});
-
-export class UserController {
-  async create(req: Request, res: Response) {
-    try {
-      const data = UserSchema.parse(req.body);
-      const user = await prisma.user.create({ data });
-      
-      // Generate JWT
-      const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!);
-      
-      return res.status(201).json({ user, token });
-    } catch (error) {
-      return res.status(400).json({ error });
-    }
-  }
-  
-  // Other CRUD methods would be implemented here
-}`,
-          "routes.ts": `import { Router } from 'express';
-import { UserController } from './UserController';
-
-const router = Router();
-const userController = new UserController();
-
-router.post('/users', userController.create);
-
-export default router;`
-        },
-        metadata: {
-          generatedAt: new Date(),
-          providerUsed: providers[0].type,
-          stage: "implementation"
+      // Create provider instances
+      const providerInstances = providers.map(config => {
+        switch (config.type) {
+          case 'openai':
+            return new OpenAIProvider(config);
+          case 'anthropic':
+            return new AnthropicProvider(config);
+          default:
+            throw new Error(`Provider type ${config.type} not implemented`);
         }
-      };
-      
-      setGeneratedCode(mockArtifact);
-      toast({
-        title: "Code Generated",
-        description: "Your agent has successfully generated code based on your specifications."
       });
       
-      // Move to the preview tab
-      setActiveTab("preview");
+      // Create code generation service
+      const codeService = new CodeGenerationService(providerInstances);
+      
+      // Clean up constraints array (remove empty entries)
+      const cleanConstraints = prompt.constraints.filter(c => c.trim() !== "");
+      
+      // Generate code
+      const artifact = await codeService.generateComponent({
+        specification: prompt.specification,
+        architecture: prompt.architecture,
+        constraints: cleanConstraints
+      });
+      
+      if (artifact) {
+        setGeneratedCode(artifact);
+        toast({
+          title: "Code Generated",
+          description: "Your agent has successfully generated code based on your specifications."
+        });
+        
+        // Move to the preview tab
+        setActiveTab("preview");
+      } else {
+        toast({
+          title: "Generation Failed",
+          description: "Failed to generate code. Please check your configuration and try again.",
+          variant: "destructive"
+        });
+      }
     } catch (error) {
+      console.error("Code generation error:", error);
       toast({
-        title: "Generation Failed",
-        description: "Failed to generate code. Please check your configuration and try again.",
+        title: "Generation Error",
+        description: "An unexpected error occurred during code generation.",
         variant: "destructive"
       });
-      console.error(error);
     } finally {
       setIsGenerating(false);
     }
