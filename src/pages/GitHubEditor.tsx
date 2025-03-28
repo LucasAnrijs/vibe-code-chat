@@ -7,8 +7,9 @@ import { GithubFile, GithubRepo, GithubAuth, parseGithubUrl, getUserInfo } from 
 import RepoExplorer from "@/components/RepoExplorer";
 import CodeEditor from "@/components/CodeEditor";
 import GitHubAssistant from "@/components/GitHubAssistant";
+import RepoRAGBuilder from "@/components/RepoRAGBuilder";
 import { toast } from "@/hooks/use-toast";
-import { Github, ExternalLink, Lock, MessageSquare, Code } from "lucide-react";
+import { Github, ExternalLink, Lock, MessageSquare, Code, Database } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +26,11 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -44,6 +50,7 @@ const GitHubEditor = () => {
   const [auth, setAuth] = useState<GithubAuth | null>(null);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [showAssistant, setShowAssistant] = useState(false);
+  const [showRagBuilder, setShowRagBuilder] = useState(false);
 
   const form = useForm<z.infer<typeof tokenSchema>>({
     resolver: zodResolver(tokenSchema),
@@ -138,6 +145,10 @@ const GitHubEditor = () => {
     setShowAssistant(!showAssistant);
   };
 
+  const toggleRagBuilder = () => {
+    setShowRagBuilder(!showRagBuilder);
+  };
+
   return (
     <div className="min-h-screen flex flex-col overflow-auto">
       <Navbar />
@@ -178,6 +189,18 @@ const GitHubEditor = () => {
                     <MessageSquare className="mr-2 h-4 w-4" />
                     {showAssistant ? "Hide Assistant" : "Show Assistant"}
                   </Button>
+                  
+                  {repo && showAssistant && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={toggleRagBuilder}
+                      className={showRagBuilder ? "bg-vibe-purple/10" : ""}
+                    >
+                      <Database className="mr-2 h-4 w-4" />
+                      {showRagBuilder ? "Hide RAG Builder" : "Show RAG Builder"}
+                    </Button>
+                  )}
                 </div>
               </div>
               <p className="text-gray-600 mb-6">
@@ -223,8 +246,14 @@ const GitHubEditor = () => {
             </div>
             
             {repo && (
-              <div className={`grid gap-6 h-[70vh] overflow-auto ${showAssistant ? 'grid-cols-1 md:grid-cols-4' : 'grid-cols-1 md:grid-cols-3'}`}>
-                <div className="md:col-span-1 overflow-auto">
+              <div className={`grid gap-6 h-[70vh] overflow-auto ${
+                showAssistant && showRagBuilder 
+                  ? 'grid-cols-1 md:grid-cols-12' 
+                  : showAssistant 
+                    ? 'grid-cols-1 md:grid-cols-4' 
+                    : 'grid-cols-1 md:grid-cols-3'
+              }`}>
+                <div className="md:col-span-1">
                   <RepoExplorer 
                     repo={repo} 
                     onFileSelect={handleFileSelect}
@@ -232,7 +261,13 @@ const GitHubEditor = () => {
                   />
                 </div>
                 
-                <div className={`${showAssistant ? 'md:col-span-2' : 'md:col-span-2'} overflow-auto`}>
+                <div className={`${
+                  showAssistant && showRagBuilder
+                    ? 'md:col-span-7'
+                    : showAssistant
+                      ? 'md:col-span-2'
+                      : 'md:col-span-2'
+                } overflow-auto`}>
                   <CodeEditor 
                     repo={repo} 
                     file={selectedFile}
@@ -242,11 +277,15 @@ const GitHubEditor = () => {
                 </div>
                 
                 {showAssistant && (
-                  <div className="md:col-span-1 overflow-auto">
+                  <div className={`${showRagBuilder ? 'md:col-span-3' : 'md:col-span-1'} overflow-auto space-y-6`}>
+                    {showRagBuilder && (
+                      <RepoRAGBuilder repo={repo} auth={auth} />
+                    )}
                     <GitHubAssistant 
                       repoName={repo ? `${repo.owner}/${repo.repo}` : ""} 
                       currentFile={selectedFile?.name || null}
                       fileContent={fileContent}
+                      repo={repo}
                     />
                   </div>
                 )}

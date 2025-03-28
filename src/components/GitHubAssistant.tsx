@@ -7,6 +7,7 @@ import { Bot, Send, Copy, FileCode, Key } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { chatWithLLM, ChatMessage } from "@/services/llmService";
 import ApiKeyInput from "@/components/ApiKeyInput";
+import { GithubRepo } from "@/services/githubService";
 
 interface Message {
   role: "user" | "assistant" | "system";
@@ -18,9 +19,10 @@ interface GitHubAssistantProps {
   repoName: string;
   currentFile: string | null;
   fileContent?: string | null;
+  repo?: GithubRepo;
 }
 
-const GitHubAssistant = ({ repoName, currentFile, fileContent }: GitHubAssistantProps) => {
+const GitHubAssistant = ({ repoName, currentFile, fileContent, repo }: GitHubAssistantProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -199,7 +201,13 @@ export default ${pageName};`;
           content: msg.content
         }));
         
-        const response = await chatWithLLM(chatMessages, apiKey);
+        // Use enhanced chatWithLLM with RAG support
+        const response = await chatWithLLM(
+          chatMessages, 
+          apiKey,
+          repo,  // Pass the repo for RAG context
+          input   // Pass the user query for relevant document retrieval
+        );
         
         // Check if response contains code block
         let content = response;
