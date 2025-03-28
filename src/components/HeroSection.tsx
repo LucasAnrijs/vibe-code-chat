@@ -12,7 +12,7 @@ const HeroSection = () => {
               Learn to code with the <span className="text-vibe-purple">perfect vibe</span>
             </h1>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto lg:mx-0">
-              Master coding through friendly chat interactions. It's like texting with a patient mentor who's always ready to help you grow.
+              Master coding through friendly chat interactions. It&apos;s like texting with a patient mentor who&apos;s always ready to help you grow.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-4">
               <Button size="lg" className="bg-vibe-purple hover:bg-vibe-purple/90 text-white px-8">
@@ -40,13 +40,13 @@ const HeroSection = () => {
                     <GraduationCap size={20} />
                   </div>
                   <div className="bg-gray-100 rounded-lg p-3 text-sm max-w-[80%]">
-                    Let's learn how to create a function in JavaScript. What's your coding experience?
+                    Let&apos;s learn how to create a function in JavaScript. What&apos;s your coding experience?
                   </div>
                 </div>
                 
                 <div className="flex items-start gap-3 justify-end">
                   <div className="bg-gray-100 rounded-lg p-3 text-sm max-w-[80%]">
-                    I'm a beginner. I've done some HTML and CSS but JavaScript feels intimidating.
+                    I&apos;m a beginner. I&apos;ve done some HTML and CSS but JavaScript feels intimidating.
                   </div>
                   <div className="bg-gray-200 text-gray-800 p-2 rounded-full">
                     <MessageCircle size={20} />
@@ -58,9 +58,11 @@ const HeroSection = () => {
                     <GraduationCap size={20} />
                   </div>
                   <div className="bg-gray-100 rounded-lg p-3 text-sm max-w-[80%]">
-                    No worries! Let's start with the basics. Here's a simple function:
+                    No worries! Let&apos;s start with the basics. Here&apos;s a simple function:
                     <pre className="bg-gray-800 text-green-400 p-2 rounded mt-2 overflow-x-auto">
-                      function sayHello() {<br/>  console.log("Hello, world!");<br/>}
+                      function sayHello() {'{'}
+                        console.log("Hello, world!");
+                      {'}'}
                     </pre>
                     Try running this. What questions do you have?
                   </div>
