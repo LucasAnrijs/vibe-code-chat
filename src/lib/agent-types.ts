@@ -1,3 +1,4 @@
+
 export type ProviderType = 'openai' | 'anthropic' | 'local';
 export type GenerationStage = 'analysis' | 'architecture' | 'implementation' | 'validation' | 'optimization';
 

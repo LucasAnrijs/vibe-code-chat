@@ -8,86 +8,9 @@ import {
 } from "@/lib/agent-types";
 import { CodeParsingService } from "./CodeParsingService";
 import { toast } from "@/hooks/use-toast";
-
-/**
- * Service for prompt engineering and formatting
- */
-class PromptEngineeringService {
-  private templates: Record<GenerationStage, string> = {
-    analysis: `
-      Analyze the following requirements:
-      {{context}}
-      
-      Identify key constraints and potential challenges.
-    `,
-    architecture: `
-      Based on previous analysis, design a scalable architecture:
-      {{context}}
-      
-      Proposed architecture constraints:
-      {{constraints}}
-    `,
-    implementation: `
-      Generate implementation using:
-      Architecture: {{context}}
-      Constraints: {{constraints}}
-      
-      Ensure type safety and best practices.
-      Use TypeScript for all implementation.
-      
-      Format each file with \`\`\`typescript filename.ts
-      // code
-      \`\`\`
-    `,
-    implementation_with_context: `
-      Generate implementation for this file:
-      {{context}}
-      
-      Previously generated files:
-      {{filesContext}}
-      
-      Constraints: {{constraints}}
-      
-      Ensure type safety and best practices.
-      Use TypeScript for all implementation.
-      Make sure this file integrates properly with previously generated files.
-      
-      Format the file with \`\`\`typescript filename.ts
-      // code
-      \`\`\`
-    `,
-    validation: `
-      Validate the following implementation:
-      {{context}}
-      
-      Identify any issues with type safety, best practices, or performance.
-    `,
-    optimization: `
-      Optimize the following implementation:
-      {{context}}
-      
-      Focus on performance, readability, and maintainability.
-    `
-  };
-
-  composePrompt(blueprint: PromptBlueprint): string {
-    const template = this.templates[blueprint.stage];
-    let processedTemplate = template
-      .replace('{{context}}', blueprint.context);
-      
-    if (blueprint.constraints) {
-      processedTemplate = processedTemplate
-        .replace('{{constraints}}', JSON.stringify(blueprint.constraints));
-    }
-    
-    if (blueprint.constraints && blueprint.constraints.filesContext) {
-      processedTemplate = processedTemplate
-        .replace('{{filesContext}}', blueprint.constraints.filesContext as string);
-    }
-    
-    return processedTemplate;
-  }
-}
+import { PromptEngineeringService } from "./PromptEngineeringService";
+import { DatabaseGenerationService } from "./DatabaseGenerationService";
+import { FileOrganizationService } from "./FileOrganizationService";
 
 /**
  * Main service for generating code using LLM providers
@@ -97,12 +20,16 @@ export class CodeGenerationService {
   private promptService: PromptEngineeringService;
   private circuitBreaker: CircuitBreaker;
   private codeParser: CodeParsingService;
+  private databaseService: DatabaseGenerationService;
+  private fileOrganizationService: FileOrganizationService;
 
   constructor(providers: LLMProvider[]) {
     this.providers = providers;
     this.promptService = new PromptEngineeringService();
     this.circuitBreaker = new CircuitBreaker();
     this.codeParser = new CodeParsingService();
+    this.databaseService = new DatabaseGenerationService();
+    this.fileOrganizationService = new FileOrganizationService();
   }
 
   async generateComponent(spec: {
@@ -258,7 +185,7 @@ export class CodeGenerationService {
         .filter(line => line.length > 0 && !line.startsWith('#') && !line.startsWith('//'));
       
       // Organize by file paths for logical generation order
-      const filePaths = this.organizeFilePathsByHierarchy(lines);
+      const filePaths = this.fileOrganizationService.organizeFilePathsByHierarchy(lines);
       
       const files: Record<string, string> = {};
       
@@ -268,7 +195,7 @@ export class CodeGenerationService {
       
       // Generate database files first if schema exists
       if (databaseSchema) {
-        await this.generateDatabaseFiles(databaseSchema, databaseType, files);
+        await this.databaseService.generateDatabaseFiles(this.providers, databaseSchema, databaseType, files);
       }
       
       // Track generation progress
@@ -292,7 +219,7 @@ export class CodeGenerationService {
         
         const result = await this.circuitBreaker.execute(async () => {
           // Create context from previously generated files
-          const filesContext = this.createFilesContext(files, filePath);
+          const filesContext = this.fileOrganizationService.createFilesContext(files, filePath);
           
           // Add database context to the blueprint if we have schema
           const dbContext = databaseSchema ? 
@@ -300,7 +227,7 @@ export class CodeGenerationService {
             
           const blueprint: PromptBlueprint = {
             context: `Generate file: ${filePath}\n\nFull architecture context: ${architecture}${dbContext}`,
-            stage: 'implementation_with_context',
+            stage: 'implementation',
             requirements: [],
             constraints: {
               filePath: filePath,
@@ -385,231 +312,6 @@ export class CodeGenerationService {
         variant: "destructive"
       });
       return null;
-    }
-  }
-
-  /**
-   * Creates context from previously generated files to help with coherent generation
-   */
-  private createFilesContext(files: Record<string, string>, currentFilePath: string): string {
-    if (Object.keys(files).length === 0) {
-      return "No files generated yet.";
-    }
-    
-    // Get related files based on path similarity
-    const currentDir = currentFilePath.includes('/') 
-      ? currentFilePath.substring(0, currentFilePath.lastIndexOf('/')) 
-      : '';
-    
-    // Find related files in the same directory or parent directories
-    const relatedFiles: string[] = [];
-    
-    // First add type definitions if the file is a component
-    const typeFiles = Object.keys(files).filter(path => 
-      path.includes('types.ts') || path.includes('.d.ts')
-    );
-    
-    // Then add files from the same directory
-    const sameDirectoryFiles = Object.keys(files).filter(path => {
-      const fileDir = path.includes('/') 
-        ? path.substring(0, path.lastIndexOf('/')) 
-        : '';
-      return fileDir === currentDir;
-    });
-    
-    // Get utility or shared files
-    const utilityFiles = Object.keys(files).filter(path => 
-      path.includes('/utils/') || path.includes('/lib/') || path.includes('/hooks/')
-    );
-    
-    // Combine and remove duplicates
-    const combinedFiles = [...typeFiles, ...sameDirectoryFiles, ...utilityFiles];
-    const uniqueFiles = [...new Set(combinedFiles)];
-    
-    // Limit to 5 most relevant files to avoid token limits
-    const contextFiles = uniqueFiles.slice(0, 5);
-    
-    let context = `Previously generated files (${contextFiles.length}/${Object.keys(files).length} shown):\n\n`;
-    
-    for (const file of contextFiles) {
-      context += `File: ${file}\n\`\`\`typescript\n${files[file]}\n\`\`\`\n\n`;
-    }
-    
-    return context;
-  }
-
-  /**
-   * Organizes file paths in a logical generation order
-   */
-  private organizeFilePathsByHierarchy(lines: string[]): string[] {
-    // Group files by type for logical ordering
-    const configFiles: string[] = [];
-    const typeFiles: string[] = [];
-    const utilityFiles: string[] = [];
-    const hookFiles: string[] = [];
-    const componentFiles: string[] = [];
-    const pageFiles: string[] = [];
-    const otherFiles: string[] = [];
-    
-    for (const line of lines) {
-      // Clean up the line
-      const filePath = line.replace(/├─|└─|│\s+/g, '').trim();
-      
-      // Categorize files
-      if (filePath.includes('/config/') || filePath.endsWith('.config.ts')) {
-        configFiles.push(filePath);
-      } else if (filePath.includes('types.ts') || filePath.includes('.d.ts')) {
-        typeFiles.push(filePath);
-      } else if (filePath.includes('/utils/') || filePath.includes('/lib/')) {
-        utilityFiles.push(filePath);
-      } else if (filePath.includes('/hooks/')) {
-        hookFiles.push(filePath);
-      } else if (filePath.includes('/components/')) {
-        componentFiles.push(filePath);
-      } else if (filePath.includes('/pages/')) {
-        pageFiles.push(filePath);
-      } else {
-        otherFiles.push(filePath);
-      }
-    }
-    
-    // Return files in logical generation order
-    return [
-      ...configFiles,
-      ...typeFiles,
-      ...utilityFiles,
-      ...hookFiles,
-      ...componentFiles,
-      ...pageFiles,
-      ...otherFiles
-    ];
-  }
-
-  private async generateDatabaseFiles(
-    schema: string, 
-    dbType: string, 
-    targetFiles: Record<string, string>
-  ): Promise<boolean> {
-    try {
-      toast({
-        title: "Generating Database",
-        description: "Creating database schema and models...",
-      });
-      
-      for (const provider of this.providers) {
-        try {
-          // Create specific DB generation prompts based on db type
-          const dbBlueprint: PromptBlueprint = {
-            context: `Generate database files for:\n${schema}\n\nUsing database type: ${dbType}`,
-            stage: 'implementation',
-            requirements: [],
-            constraints: {
-              databaseType: dbType,
-              task: "generate_database_files"
-            }
-          };
-          
-          // For Prisma specifically, generate schema.prisma
-          if (dbType === 'prisma') {
-            const prismaBlueprint: PromptBlueprint = {
-              context: `Convert this schema definition to a Prisma schema file:\n${schema}`,
-              stage: 'implementation',
-              requirements: [],
-              constraints: {
-                databaseType: "prisma",
-                task: "generate_prisma_schema"
-              }
-            };
-            
-            const generationStream = provider.generate(prismaBlueprint);
-            let fullResponse = '';
-            
-            for await (const chunk of generationStream) {
-              fullResponse += chunk.content;
-            }
-            
-            if (provider.validateResponse(fullResponse)) {
-              const generatedFiles = this.codeParser.parseCodeBlocks(fullResponse);
-              Object.assign(targetFiles, generatedFiles);
-              
-              // Also generate the client file
-              const clientBlueprint: PromptBlueprint = {
-                context: `Generate a Prisma client setup file based on this schema:\n${schema}`,
-                stage: 'implementation',
-                requirements: [],
-                constraints: {
-                  databaseType: "prisma",
-                  task: "generate_prisma_client"
-                }
-              };
-              
-              const clientStream = provider.generate(clientBlueprint);
-              let clientResponse = '';
-              
-              for await (const chunk of clientStream) {
-                clientResponse += chunk.content;
-              }
-              
-              if (provider.validateResponse(clientResponse)) {
-                const clientFiles = this.codeParser.parseCodeBlocks(clientResponse);
-                Object.assign(targetFiles, clientFiles);
-              }
-            }
-          } else {
-            // For MongoDB or TypeORM
-            const generationStream = provider.generate(dbBlueprint);
-            let fullResponse = '';
-            
-            for await (const chunk of generationStream) {
-              fullResponse += chunk.content;
-            }
-            
-            if (provider.validateResponse(fullResponse)) {
-              const generatedFiles = this.codeParser.parseCodeBlocks(fullResponse);
-              Object.assign(targetFiles, generatedFiles);
-            }
-          }
-          
-          // Also generate sample API routes for the models
-          const apiBlueprint: PromptBlueprint = {
-            context: `Generate RESTful API route handlers for this schema:\n${schema}\n\nUsing database type: ${dbType}`,
-            stage: 'implementation',
-            requirements: [],
-            constraints: {
-              databaseType: dbType,
-              task: "generate_api_routes"
-            }
-          };
-          
-          const apiStream = provider.generate(apiBlueprint);
-          let apiResponse = '';
-          
-          for await (const chunk of apiStream) {
-            apiResponse += chunk.content;
-          }
-          
-          if (provider.validateResponse(apiResponse)) {
-            const apiFiles = this.codeParser.parseCodeBlocks(apiResponse);
-            Object.assign(targetFiles, apiFiles);
-          }
-          
-          return true;
-        } catch (error) {
-          console.warn(`Provider ${provider.constructor.name} failed for database generation:`, error);
-          // Continue with next provider
-        }
-      }
-      
-      // If we got here, all providers failed
-      return false;
-    } catch (error) {
-      console.error("Database generation failed:", error);
-      toast({
-        title: "Database Generation Error",
-        description: "Failed to generate database files.",
-        variant: "destructive"
-      });
-      return false;
     }
   }
 }
