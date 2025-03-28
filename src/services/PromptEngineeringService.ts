@@ -11,6 +11,7 @@ export class PromptEngineeringService {
       {{context}}
       
       Identify key constraints and potential challenges.
+      Suggest appropriate design patterns and architectural approaches.
     `,
     architecture: `
       Based on previous analysis, design a scalable architecture:
@@ -18,6 +19,9 @@ export class PromptEngineeringService {
       
       Proposed architecture constraints:
       {{constraints}}
+      
+      Include component relationships, data flow, and state management strategy.
+      Focus on maintainability and separation of concerns.
     `,
     implementation: `
       Generate implementation using:
@@ -26,6 +30,9 @@ export class PromptEngineeringService {
       
       Ensure type safety and best practices.
       Use TypeScript for all implementation.
+      Follow React hooks best practices.
+      Use Tailwind CSS for styling with shadcn/ui components where appropriate.
+      Include comprehensive error handling and loading states.
       
       Format each file with \`\`\`typescript filename.ts
       // code
@@ -42,7 +49,11 @@ export class PromptEngineeringService {
       
       Ensure type safety and best practices.
       Use TypeScript for all implementation.
+      Follow React hooks best practices.
+      Use Tailwind CSS for styling with shadcn/ui components where appropriate.
+      Include comprehensive error handling and loading states.
       Make sure this file integrates properly with previously generated files.
+      All imports should reference existing files in the project.
       
       Format the file with \`\`\`typescript filename.ts
       // code
@@ -53,12 +64,17 @@ export class PromptEngineeringService {
       {{context}}
       
       Identify any issues with type safety, best practices, or performance.
+      Check for common React anti-patterns.
+      Validate integration points between components.
     `,
     optimization: `
       Optimize the following implementation:
       {{context}}
       
       Focus on performance, readability, and maintainability.
+      Implement memoization where appropriate.
+      Ensure proper cleanup in useEffect hooks.
+      Optimize rendering performance with proper dependency arrays.
     `
   };
 

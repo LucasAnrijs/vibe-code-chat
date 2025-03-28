@@ -61,7 +61,9 @@ const ArchitectureGenerator = () => {
         'Generate complete implementation files for each component in the architecture',
         'Ensure each component is functional and imports any dependencies it needs',
         'Add appropriate TypeScript types and interfaces',
-        'Create a cohesive application that demonstrates the architecture'
+        'Create a cohesive application that demonstrates the architecture',
+        'Make sure components have proper error handling and loading states',
+        'Use proper React hooks patterns and follow best practices'
       ];
       
       if (databaseSchema) {
@@ -93,7 +95,7 @@ const ArchitectureGenerator = () => {
         });
         
         // Switch to the preview tab
-        setActiveTab("preview");
+        setActiveTab("code");
       }
     } catch (error) {
       console.error("Application generation error:", error);
@@ -113,6 +115,10 @@ const ArchitectureGenerator = () => {
       title: "Copied",
       description: "Architecture structure copied to clipboard"
     });
+  };
+
+  const handleShowPreview = () => {
+    setActiveTab("preview");
   };
 
   return (
@@ -202,7 +208,10 @@ const ArchitectureGenerator = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <GeneratedCodeViewer artifact={generatedCode} />
+                <GeneratedCodeViewer 
+                  artifact={generatedCode} 
+                  onShowPreview={handleShowPreview}
+                />
               </CardContent>
             </Card>
           </TabsContent>
