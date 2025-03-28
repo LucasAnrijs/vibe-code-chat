@@ -35,9 +35,21 @@ class PromptEngineeringService {
       Ensure type safety and best practices.
       Use TypeScript for all implementation.
       
-      Format each file with \`\`\`typescript:filename.ts
+      Format each file with \`\`\`typescript filename.ts
       // code
       \`\`\`
+    `,
+    validation: `
+      Validate the following implementation:
+      {{context}}
+      
+      Identify any issues with type safety, best practices, or performance.
+    `,
+    optimization: `
+      Optimize the following implementation:
+      {{context}}
+      
+      Focus on performance, readability, and maintainability.
     `
   };
 

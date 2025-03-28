@@ -1,6 +1,5 @@
-
 export type ProviderType = 'openai' | 'anthropic' | 'local';
-export type GenerationStage = 'analysis' | 'architecture' | 'implementation';
+export type GenerationStage = 'analysis' | 'architecture' | 'implementation' | 'validation' | 'optimization';
 
 export interface ProviderConfig {
   type: ProviderType;
@@ -37,7 +36,6 @@ export interface ValidationReport {
   coverageScore?: number;
 }
 
-// Abstract LLM Provider definition
 export abstract class LLMProvider {
   protected config: ProviderConfig;
 
@@ -46,12 +44,10 @@ export abstract class LLMProvider {
   }
 
   abstract initialize(): Promise<void>;
-  // Changed to return AsyncGenerator directly, not Promise<AsyncGenerator>
   abstract generate(prompt: PromptBlueprint): AsyncGenerator<PromptChunk>;
   abstract validateResponse(response: unknown): boolean;
 }
 
-// Circuit Breaker Pattern
 export class CircuitBreaker {
   private failureThreshold: number;
   private recoveryTime: number;

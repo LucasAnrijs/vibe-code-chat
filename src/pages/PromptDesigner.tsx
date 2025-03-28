@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Wand2, Code, FileJson, Layers, Play, GitBranch, History } from "lucide-react";
+import { Wand2, Code, FileJson, Layers, Play, GitBranch, History, Loader } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,6 +11,9 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import CodePreview from "@/components/agent-builder/CodePreview";
 import { CodeArtifact } from "@/lib/agent-types";
+import { CodeGenerationService } from "@/services/CodeGenerationService";
+import { OpenAIProvider } from "@/services/llm-providers/OpenAIProvider";
+import { AnthropicProvider } from "@/services/llm-providers/AnthropicProvider";
 
 // Sample template options
 const promptTemplates = [
@@ -29,6 +32,19 @@ const PromptDesigner = () => {
   const [temperature, setTemperature] = useState<string>("0.2");
   const [generatedCode, setGeneratedCode] = useState<CodeArtifact | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [provider, setProvider] = useState<'openai' | 'anthropic'>('openai');
+  const [apiKey, setApiKey] = useState(localStorage.getItem(`${provider}_api_key`) || "");
+
+  // Save API key to localStorage when it changes
+  const handleApiKeyChange = (value: string) => {
+    setApiKey(value);
+    localStorage.setItem(`${provider}_api_key`, value);
+  };
+
+  // Update api key when provider changes
+  React.useEffect(() => {
+    setApiKey(localStorage.getItem(`${provider}_api_key`) || "");
+  }, [provider]);
 
   const handleGenerateCode = async () => {
     if (!userInput.trim()) {
@@ -40,37 +56,56 @@ const PromptDesigner = () => {
       return;
     }
 
+    if (!apiKey.trim()) {
+      toast({
+        title: "API Key Required",
+        description: `Please enter your ${provider === 'openai' ? 'OpenAI' : 'Anthropic'} API key.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsGenerating(true);
 
     try {
-      // In a real implementation, this would call an API or use the LLM service
-      // For now, we'll create a mock response
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Create the appropriate provider based on selection
+      let llmProvider;
+      if (provider === 'openai') {
+        llmProvider = new OpenAIProvider({ type: 'openai', apiKey });
+      } else {
+        llmProvider = new AnthropicProvider({ type: 'anthropic', apiKey });
+      }
+
+      // Initialize the code generation service with the provider
+      const codeGenerationService = new CodeGenerationService([llmProvider]);
       
-      const mockArtifact: CodeArtifact = {
-        files: {
-          "architecture.txt": "# Component Architecture\n\n## Core Components\n1. PromptDesigner - Main interface for designing prompts\n2. TemplateEditor - For editing prompt templates\n3. CodePreview - For previewing generated code\n4. ValidationPanel - For validating generated code\n\n## Data Flow\nUser Input -> Template Processing -> LLM Generation -> Code Output -> Validation",
-          "PromptDesigner.tsx": `import React from 'react';\nimport { Tabs } from './ui/tabs';\n\nconst PromptDesigner = () => {\n  return (\n    <div className="p-4">\n      <h1>Prompt Designer</h1>\n      <Tabs>\n        {/* Tab content */}\n      </Tabs>\n    </div>\n  );\n};\n\nexport default PromptDesigner;`,
-          "types.ts": `export interface PromptTemplate {\n  id: string;\n  name: string;\n  template: string;\n  variables?: string[];\n}\n\nexport interface GenerationConfig {\n  temperature: number;\n  maxTokens: number;\n  provider: 'openai' | 'anthropic' | 'custom';\n}`
-        },
-        metadata: {
-          generatedAt: new Date(),
-          providerUsed: "MockProvider",
-          stage: generationPhase
-        }
-      };
+      // Create a prompt for the selected template and input
+      const processedPrompt = selectedTemplate.template.replace(
+        "{userRequirements}",
+        userInput
+      );
       
-      setGeneratedCode(mockArtifact);
-      
-      toast({
-        title: "Generation Complete",
-        description: `Successfully generated ${Object.keys(mockArtifact.files).length} files.`
+      // Generate the code
+      const artifact = await codeGenerationService.generateComponent({
+        specification: processedPrompt,
+        architecture: `Phase: ${generationPhase}, Temperature: ${temperature}`,
+        constraints: [`Template: ${selectedTemplate.name}`, `Temperature: ${temperature}`]
       });
+      
+      if (artifact) {
+        setGeneratedCode(artifact);
+        setActiveTab("output");
+        
+        toast({
+          title: "Generation Complete",
+          description: `Successfully generated ${Object.keys(artifact.files).length} files.`
+        });
+      }
     } catch (error) {
       console.error("Generation error:", error);
       toast({
         title: "Generation Failed",
-        description: "Failed to generate code. Please try again.",
+        description: "Failed to generate code. Please check your API key and try again.",
         variant: "destructive"
       });
     } finally {
@@ -121,7 +156,36 @@ const PromptDesigner = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium">Provider</label>
+                      <Select 
+                        value={provider} 
+                        onValueChange={(value: 'openai' | 'anthropic') => setProvider(value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="openai">OpenAI</SelectItem>
+                          <SelectItem value="anthropic">Anthropic</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div>
+                      <label className="text-sm font-medium">API Key</label>
+                      <input
+                        type="password"
+                        value={apiKey}
+                        onChange={(e) => handleApiKeyChange(e.target.value)}
+                        className="w-full p-2 border rounded"
+                        placeholder={`Enter your ${provider === 'openai' ? 'OpenAI' : 'Anthropic'} API key`}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="text-sm font-medium">Template</label>
                       <Select 
@@ -217,7 +281,10 @@ const PromptDesigner = () => {
                   className="bg-vibe-purple hover:bg-vibe-purple/90"
                 >
                   {isGenerating ? (
-                    <>Generating...</>
+                    <>
+                      <Loader className="mr-2 h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
                   ) : (
                     <>
                       <Play className="mr-2 h-4 w-4" />
