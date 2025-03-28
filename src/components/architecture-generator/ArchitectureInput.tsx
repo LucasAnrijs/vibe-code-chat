@@ -100,7 +100,7 @@ const ArchitectureInput: React.FC<ArchitectureInputProps> = ({
               <SelectValue placeholder="Select a template" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Custom (Empty)</SelectItem>
+              <SelectItem value="custom">Custom (Empty)</SelectItem>
               <SelectItem value="basic">Basic Application</SelectItem>
               <SelectItem value="dashboard">Dashboard Application</SelectItem>
               <SelectItem value="fullstack">Fullstack Application</SelectItem>
