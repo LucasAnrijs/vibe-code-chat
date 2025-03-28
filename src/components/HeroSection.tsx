@@ -7,6 +7,7 @@ import ChatInput from "@/components/ChatInput";
 import ApiKeyInput from "@/components/ApiKeyInput";
 import CodeSnippetTester from "@/components/CodeSnippetTester";
 import { chatWithLLM, type ChatMessage as ChatMessageType } from "@/services/chatService";
+import { Link } from "react-router-dom";
 
 const HeroSection = () => {
   const [messages, setMessages] = useState<ChatMessageType[]>([
@@ -71,8 +72,15 @@ const HeroSection = () => {
               <Button size="lg" className="bg-vibe-purple hover:bg-vibe-purple/90 text-white px-8">
                 Get Started Free
               </Button>
-              <Button size="lg" variant="outline" className="border-vibe-purple text-vibe-purple hover:bg-vibe-purple hover:text-white">
-                See Demo <ArrowRight className="ml-2 h-4 w-4" />
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="border-vibe-purple text-vibe-purple hover:bg-vibe-purple hover:text-white"
+                asChild
+              >
+                <Link to="/curriculum">
+                  View Curriculum <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
               </Button>
             </div>
             <div className="text-sm text-gray-500 pt-4">No credit card required</div>
