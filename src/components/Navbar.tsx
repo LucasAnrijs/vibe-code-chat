@@ -13,11 +13,11 @@ import { cn } from "@/lib/utils";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Menu, X, Github, BookOpen, Code, Brain, Wand2, FolderTree } from "lucide-react";
-import { useMobileDetect } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const isMobile = useMobileDetect();
+  const isMobile = useIsMobile();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
 
