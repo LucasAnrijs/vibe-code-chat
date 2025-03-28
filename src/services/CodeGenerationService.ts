@@ -35,9 +35,9 @@ class PromptEngineeringService {
       Ensure type safety and best practices.
       Use TypeScript for all implementation.
       
-      Format each file with ```typescript:filename.ts
+      Format each file with \`\`\`typescript:filename.ts
       // code
-      ```
+      \`\`\`
     `
   };
 
