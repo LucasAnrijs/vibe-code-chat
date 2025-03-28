@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { GithubFile, GithubRepo, GithubAuth, parseGithubUrl, getUserInfo } from "@/services/githubService";
 import RepoExplorer from "@/components/RepoExplorer";
 import CodeEditor from "@/components/CodeEditor";
+import GitHubAssistant from "@/components/GitHubAssistant";
 import { toast } from "@/hooks/use-toast";
-import { Github, ExternalLink, Lock } from "lucide-react";
+import { Github, ExternalLink, Lock, MessageSquare, Code } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -42,6 +43,7 @@ const GitHubEditor = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [auth, setAuth] = useState<GithubAuth | null>(null);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [showAssistant, setShowAssistant] = useState(false);
 
   const form = useForm<z.infer<typeof tokenSchema>>({
     resolver: zodResolver(tokenSchema),
@@ -131,6 +133,10 @@ const GitHubEditor = () => {
     });
   };
 
+  const toggleAssistant = () => {
+    setShowAssistant(!showAssistant);
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -141,25 +147,37 @@ const GitHubEditor = () => {
             <div className="mb-8">
               <div className="flex justify-between items-center mb-2">
                 <h1 className="text-3xl font-bold">GitHub Repository Editor</h1>
-                {auth ? (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">
-                      Signed in as <span className="font-medium">{auth.username}</span>
-                    </span>
-                    <Button variant="outline" size="sm" onClick={handleLogout}>
-                      Sign Out
+                <div className="flex items-center gap-2">
+                  {auth ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-600">
+                        Signed in as <span className="font-medium">{auth.username}</span>
+                      </span>
+                      <Button variant="outline" size="sm" onClick={handleLogout}>
+                        Sign Out
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setShowAuthDialog(true)}
+                    >
+                      <Lock className="mr-2 h-4 w-4" />
+                      Sign In with GitHub
                     </Button>
-                  </div>
-                ) : (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => setShowAuthDialog(true)}
+                  )}
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={toggleAssistant}
+                    className={showAssistant ? "bg-vibe-purple/10" : ""}
                   >
-                    <Lock className="mr-2 h-4 w-4" />
-                    Sign In with GitHub
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    {showAssistant ? "Hide Assistant" : "Show Assistant"}
                   </Button>
-                )}
+                </div>
               </div>
               <p className="text-gray-600 mb-6">
                 Browse and edit code from any public GitHub repository. Enter a repository URL to get started.
@@ -204,7 +222,7 @@ const GitHubEditor = () => {
             </div>
             
             {repo && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-[70vh]">
+              <div className={`grid gap-6 h-[70vh] ${showAssistant ? 'grid-cols-1 md:grid-cols-4' : 'grid-cols-1 md:grid-cols-3'}`}>
                 <div className="md:col-span-1">
                   <RepoExplorer 
                     repo={repo} 
@@ -212,13 +230,23 @@ const GitHubEditor = () => {
                     auth={auth}
                   />
                 </div>
-                <div className="md:col-span-2">
+                
+                <div className={`${showAssistant ? 'md:col-span-2' : 'md:col-span-2'}`}>
                   <CodeEditor 
                     repo={repo} 
                     file={selectedFile}
                     auth={auth}
                   />
                 </div>
+                
+                {showAssistant && (
+                  <div className="md:col-span-1">
+                    <GitHubAssistant 
+                      repoName={repo ? `${repo.owner}/${repo.repo}` : ""} 
+                      currentFile={selectedFile?.name || null}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>
