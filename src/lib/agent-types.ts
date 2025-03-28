@@ -46,7 +46,8 @@ export abstract class LLMProvider {
   }
 
   abstract initialize(): Promise<void>;
-  abstract generate(prompt: PromptBlueprint): Promise<AsyncGenerator<PromptChunk>>;
+  // Changed to return AsyncGenerator directly, not Promise<AsyncGenerator>
+  abstract generate(prompt: PromptBlueprint): AsyncGenerator<PromptChunk>;
   abstract validateResponse(response: unknown): boolean;
 }
 

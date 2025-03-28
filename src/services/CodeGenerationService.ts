@@ -127,7 +127,7 @@ export class CodeGenerationService {
               let fullResponse = '';
               
               // Consume the stream - in a real implementation, update UI with chunks
-              for await (const chunk of await generationStream) {
+              for await (const chunk of generationStream) {
                 fullResponse += chunk.content;
               }
 
