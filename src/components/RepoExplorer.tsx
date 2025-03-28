@@ -1,16 +1,17 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronRight, File, Folder, FolderOpen, ArrowLeft } from "lucide-react";
-import { GithubFile, GithubRepo, fetchRepoContents } from "@/services/githubService";
+import { GithubFile, GithubRepo, GithubAuth, fetchRepoContents } from "@/services/githubService";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 
 interface RepoExplorerProps {
   repo: GithubRepo;
   onFileSelect: (file: GithubFile) => void;
+  auth: GithubAuth | null;
 }
 
-const RepoExplorer = ({ repo, onFileSelect }: RepoExplorerProps) => {
+const RepoExplorer = ({ repo, onFileSelect, auth }: RepoExplorerProps) => {
   const [currentPath, setCurrentPath] = useState("");
   const [contents, setContents] = useState<GithubFile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -18,7 +19,7 @@ const RepoExplorer = ({ repo, onFileSelect }: RepoExplorerProps) => {
 
   const loadContents = async (path: string = "") => {
     setIsLoading(true);
-    const files = await fetchRepoContents(repo, path);
+    const files = await fetchRepoContents(repo, path, auth || undefined);
     setContents(files);
     setCurrentPath(path);
     setIsLoading(false);
@@ -33,10 +34,12 @@ const RepoExplorer = ({ repo, onFileSelect }: RepoExplorerProps) => {
     loadContents(newPath);
   };
 
-  // Load initial contents when repo changes
-  useState(() => {
-    loadContents();
-  });
+  // Load initial contents when repo or auth changes
+  useEffect(() => {
+    if (repo) {
+      loadContents();
+    }
+  }, [repo, auth]);
 
   const handleItemClick = async (item: GithubFile) => {
     if (item.type === 'dir') {

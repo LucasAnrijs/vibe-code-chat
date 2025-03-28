@@ -2,19 +2,30 @@
 import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { GithubFile, GithubRepo, fetchFileContent } from "@/services/githubService";
+import { GithubFile, GithubRepo, GithubAuth, fetchFileContent, saveFileContent } from "@/services/githubService";
 import { Save, Copy, FileCode } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface CodeEditorProps {
   repo: GithubRepo;
   file: GithubFile | null;
+  auth: GithubAuth | null;
 }
 
-const CodeEditor = ({ repo, file }: CodeEditorProps) => {
+const CodeEditor = ({ repo, file, auth }: CodeEditorProps) => {
   const [code, setCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showCommitDialog, setShowCommitDialog] = useState(false);
+  const [commitMessage, setCommitMessage] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -22,7 +33,7 @@ const CodeEditor = ({ repo, file }: CodeEditorProps) => {
       if (!file) return;
       
       setIsLoading(true);
-      const content = await fetchFileContent(repo, file.path);
+      const content = await fetchFileContent(repo, file.path, auth || undefined);
       if (content !== null) {
         setCode(content);
       }
@@ -30,7 +41,7 @@ const CodeEditor = ({ repo, file }: CodeEditorProps) => {
     };
     
     loadFileContent();
-  }, [file, repo]);
+  }, [file, repo, auth]);
 
   const handleCopyCode = () => {
     navigator.clipboard.writeText(code);
@@ -40,17 +51,44 @@ const CodeEditor = ({ repo, file }: CodeEditorProps) => {
     });
   };
 
-  const handleSaveChanges = () => {
-    // In a real app, this would call the GitHub API to save changes
-    // Currently we're only demonstrating the UI flow
+  const handleSaveChanges = async () => {
+    if (!file || !auth?.token) {
+      toast({
+        title: "Authentication Required",
+        description: "You need to provide a GitHub token to save changes.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setShowCommitDialog(true);
+    // Default commit message
+    setCommitMessage(`Update ${file.name}`);
+  };
+
+  const handleConfirmSave = async () => {
+    if (!file || !auth?.token) return;
+    
     setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
+    setShowCommitDialog(false);
+    
+    const success = await saveFileContent(
+      repo,
+      file.path,
+      code,
+      file.sha,
+      auth,
+      commitMessage
+    );
+    
+    setIsSaving(false);
+    
+    if (success) {
       toast({
         title: "Changes saved",
-        description: `${file?.name} has been updated`,
+        description: `${file.name} has been updated`,
       });
-    }, 1000);
+    }
   };
 
   if (!file) {
@@ -86,7 +124,7 @@ const CodeEditor = ({ repo, file }: CodeEditorProps) => {
             size="sm" 
             className="h-7 px-2"
             onClick={handleSaveChanges}
-            disabled={isSaving}
+            disabled={isSaving || !auth?.token}
           >
             <Save size={14} className="mr-1" />
             {isSaving ? "Saving..." : "Save"}
@@ -108,6 +146,30 @@ const CodeEditor = ({ repo, file }: CodeEditorProps) => {
           />
         )}
       </div>
+
+      <Dialog open={showCommitDialog} onOpenChange={setShowCommitDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Commit Changes</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <label className="text-sm font-medium mb-2 block">Commit message</label>
+            <Input
+              value={commitMessage}
+              onChange={(e) => setCommitMessage(e.target.value)}
+              placeholder="Enter a commit message"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCommitDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmSave} disabled={!commitMessage.trim()}>
+              Commit Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
