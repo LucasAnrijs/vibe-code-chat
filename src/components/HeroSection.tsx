@@ -1,8 +1,60 @@
 
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, GraduationCap, ArrowRight } from "lucide-react";
+import ChatMessage from "@/components/ChatMessage";
+import ChatInput from "@/components/ChatInput";
+import ApiKeyInput from "@/components/ApiKeyInput";
+import { chatWithLLM, type ChatMessage } from "@/services/chatService";
 
 const HeroSection = () => {
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      role: "assistant",
+      content: "Let's learn how to create a function in JavaScript. What's your coding experience?"
+    }
+  ]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [apiKey, setApiKey] = useState<string | null>(null);
+
+  // Load API key from localStorage on component mount
+  useEffect(() => {
+    const savedApiKey = localStorage.getItem("openai_api_key");
+    if (savedApiKey) {
+      setApiKey(savedApiKey);
+    }
+  }, []);
+
+  const handleSaveApiKey = (key: string) => {
+    localStorage.setItem("openai_api_key", key);
+    setApiKey(key);
+  };
+
+  const handleSendMessage = async (content: string) => {
+    if (!apiKey) return;
+    
+    // Add user message to chat
+    const userMessage: ChatMessage = { role: "user", content };
+    setMessages(prev => [...prev, userMessage]);
+    setIsLoading(true);
+    
+    try {
+      // Create a copy of messages for the API call
+      const messageHistory = [...messages, userMessage];
+      
+      // Get response from LLM
+      const response = await chatWithLLM(messageHistory, apiKey);
+      
+      // Add assistant response to chat
+      const assistantMessage: ChatMessage = { role: "assistant", content: response };
+      setMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error("Error sending message:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <section className="pt-28 pb-16 md:pt-32 md:pb-24 bg-gradient-to-b from-white to-purple-50">
       <div className="container mx-auto px-4 md:px-6">
@@ -34,51 +86,35 @@ const HeroSection = () => {
                 <div className="ml-2 text-sm font-medium text-gray-500">chat.vibecode.io</div>
               </div>
               
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="bg-vibe-purple text-white p-2 rounded-full shadow-md">
-                    <GraduationCap size={20} />
-                  </div>
-                  <div className="bg-gray-100 rounded-lg p-3 text-sm max-w-[80%] shadow-sm">
-                    Let&apos;s learn how to create a function in JavaScript. What&apos;s your coding experience?
-                  </div>
-                </div>
+              {!apiKey && <ApiKeyInput onApiKeySubmit={handleSaveApiKey} />}
+              
+              <div className="space-y-4 max-h-[300px] overflow-y-auto mb-4">
+                {messages.map((message, index) => (
+                  <ChatMessage key={index} message={message} />
+                ))}
                 
-                <div className="flex items-start gap-3 justify-end">
-                  <div className="bg-gray-100 rounded-lg p-3 text-sm max-w-[80%] shadow-sm">
-                    I&apos;m a beginner. I&apos;ve done some HTML and CSS but JavaScript feels intimidating.
-                  </div>
-                  <div className="bg-gray-200 text-gray-800 p-2 rounded-full shadow-md">
-                    <MessageCircle size={20} />
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-3">
-                  <div className="bg-vibe-purple text-white p-2 rounded-full shadow-md">
-                    <GraduationCap size={20} />
-                  </div>
-                  <div className="bg-gray-100 rounded-lg p-3 text-sm max-w-[80%] shadow-sm">
-                    No worries! Let&apos;s start with the basics. Here&apos;s a simple function:
-                    <pre className="bg-gray-800 text-green-400 p-2 rounded mt-2 overflow-x-auto">
-                      function sayHello() {'{'}
-                        console.log("Hello, world!");
-                      {'}'}
-                    </pre>
-                    Try running this. What questions do you have?
-                  </div>
-                </div>
-                
-                <div className="relative">
-                  <div className="h-10 bg-gray-100 rounded-full flex items-center pl-4 pr-12 shadow-inner">
-                    <div className="animate-typing overflow-hidden whitespace-nowrap border-r-2 border-gray-500 pr-1">
-                      How do I call this function?
+                {isLoading && (
+                  <div className="flex items-start gap-3">
+                    <div className="bg-vibe-purple text-white p-2 rounded-full shadow-md">
+                      <GraduationCap size={20} />
+                    </div>
+                    <div className="bg-gray-100 rounded-lg p-3 text-sm max-w-[80%] shadow-sm">
+                      <div className="flex space-x-2">
+                        <div className="h-2 w-2 bg-gray-300 rounded-full animate-bounce"></div>
+                        <div className="h-2 w-2 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
+                        <div className="h-2 w-2 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: "0.4s" }}></div>
+                      </div>
                     </div>
                   </div>
-                  <button className="absolute right-3 top-1/2 transform -translate-y-1/2 text-vibe-purple">
-                    <ArrowRight size={18} />
-                  </button>
-                </div>
+                )}
               </div>
+              
+              <ChatInput 
+                onSendMessage={handleSendMessage} 
+                isLoading={isLoading} 
+                placeholder={apiKey ? "Ask about JavaScript..." : "Enter API key first..."}
+                autoFocus={!!apiKey}
+              />
               
               <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 bg-vibe-purple text-white px-4 py-1 rounded-full text-sm font-medium shadow-lg">
                 Interactive Live Demo

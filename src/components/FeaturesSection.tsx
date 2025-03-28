@@ -5,7 +5,7 @@ const features = [
   {
     icon: <MessageCircle className="h-6 w-6 text-vibe-purple" />,
     title: "Chat-Based Learning",
-    description: "Learn coding concepts through natural conversations, just like chatting with a friend."
+    description: "Learn coding concepts through natural conversations, just like chatting with a friend who's an expert developer."
   },
   {
     icon: <Code className="h-6 w-6 text-vibe-purple" />,
@@ -51,7 +51,11 @@ const FeaturesSection = () => {
           {features.map((feature, index) => (
             <div 
               key={index} 
-              className={`bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow ${index === 0 ? 'ring-2 ring-vibe-purple scale-105 shadow-md' : ''}`}
+              className={`
+                bg-white p-6 rounded-xl border border-gray-200 shadow-sm 
+                hover:shadow-md transition-shadow
+                ${index === 0 ? 'ring-2 ring-vibe-purple scale-105 shadow-md transform hover:scale-110 transition-all duration-300' : ''}
+              `}
             >
               <div className={`${index === 0 ? 'bg-vibe-purple p-3 rounded-lg inline-block mb-4' : 'bg-purple-50 p-3 rounded-lg inline-block mb-4'}`}>
                 {index === 0 ? 
@@ -61,7 +65,7 @@ const FeaturesSection = () => {
               </div>
               <h3 className={`text-xl font-semibold ${index === 0 ? 'text-vibe-purple' : 'text-vibe-dark'} mb-3`}>
                 {feature.title}
-                {index === 0 && <span className="ml-2 text-xs bg-purple-100 text-vibe-purple px-2 py-1 rounded-full">Core Feature</span>}
+                {index === 0 && <span className="ml-2 text-xs bg-purple-100 text-vibe-purple px-2 py-1 rounded-full">Live Demo</span>}
               </h3>
               <p className="text-gray-600">{feature.description}</p>
             </div>
