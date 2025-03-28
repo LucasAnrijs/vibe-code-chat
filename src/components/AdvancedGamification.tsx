@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +11,8 @@ import {
   pointsToNextLevel, 
   getRecentAchievements 
 } from "@/lib/achievements-data";
-import { categoryColors, categoryIcons, Achievement, AchievementCategory } from "@/lib/achievement-types";
+import type { AchievementCategory, Achievement } from "@/lib/achievement-types";
+import { categoryColors, categoryIcons } from "@/lib/achievement-types";
 import { Award, Star } from "lucide-react";
 
 interface AchievementCardProps {
@@ -105,7 +105,6 @@ const AdvancedGamification: React.FC = () => {
   const nextLevelPoints = pointsToNextLevel(totalPoints);
   const recentAchievements = getRecentAchievements();
   
-  // Filter achievements by category or show all
   const filteredAchievements = achievements.filter(achievement => {
     if (activeTab === "all") return true;
     if (activeTab === "earned") return achievement.earned;
@@ -114,7 +113,6 @@ const AdvancedGamification: React.FC = () => {
     return achievement.category === activeTab;
   });
   
-  // Count achievements by category
   const categoryCounts = {} as Record<AchievementCategory, { total: number, earned: number }>;
   achievements.forEach(a => {
     if (!categoryCounts[a.category]) {
@@ -124,7 +122,6 @@ const AdvancedGamification: React.FC = () => {
     if (a.earned) categoryCounts[a.category].earned++;
   });
   
-  // Completed achievement percentage
   const earnedPercentage = (achievements.filter(a => a.earned).length / achievements.length) * 100;
   
   return (
