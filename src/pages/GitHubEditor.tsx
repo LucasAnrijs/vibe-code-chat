@@ -39,6 +39,7 @@ const GitHubEditor = () => {
   const [repoUrl, setRepoUrl] = useState("");
   const [repo, setRepo] = useState<GithubRepo | null>(null);
   const [selectedFile, setSelectedFile] = useState<GithubFile | null>(null);
+  const [fileContent, setFileContent] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [auth, setAuth] = useState<GithubAuth | null>(null);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
@@ -73,6 +74,7 @@ const GitHubEditor = () => {
     if (parsedRepo) {
       setRepo(parsedRepo);
       setSelectedFile(null);
+      setFileContent(null);
       toast({
         title: "Repository opened",
         description: `${parsedRepo.owner}/${parsedRepo.repo} (${parsedRepo.branch})`,
@@ -90,6 +92,10 @@ const GitHubEditor = () => {
 
   const handleFileSelect = (file: GithubFile) => {
     setSelectedFile(file);
+  };
+
+  const handleFileContentUpdate = (content: string) => {
+    setFileContent(content);
   };
 
   const handleLogin = async (values: z.infer<typeof tokenSchema>) => {
@@ -231,6 +237,7 @@ const GitHubEditor = () => {
                     repo={repo} 
                     file={selectedFile}
                     auth={auth}
+                    onContentUpdate={handleFileContentUpdate}
                   />
                 </div>
                 
@@ -239,6 +246,7 @@ const GitHubEditor = () => {
                     <GitHubAssistant 
                       repoName={repo ? `${repo.owner}/${repo.repo}` : ""} 
                       currentFile={selectedFile?.name || null}
+                      fileContent={fileContent}
                     />
                   </div>
                 )}

@@ -18,9 +18,10 @@ interface CodeEditorProps {
   repo: GithubRepo;
   file: GithubFile | null;
   auth: GithubAuth | null;
+  onContentUpdate?: (content: string) => void;
 }
 
-const CodeEditor = ({ repo, file, auth }: CodeEditorProps) => {
+const CodeEditor = ({ repo, file, auth, onContentUpdate }: CodeEditorProps) => {
   const [code, setCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -36,12 +37,19 @@ const CodeEditor = ({ repo, file, auth }: CodeEditorProps) => {
       const content = await fetchFileContent(repo, file.path, auth || undefined);
       if (content !== null) {
         setCode(content);
+        onContentUpdate?.(content);
       }
       setIsLoading(false);
     };
     
     loadFileContent();
-  }, [file, repo, auth]);
+  }, [file, repo, auth, onContentUpdate]);
+
+  const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newCode = e.target.value;
+    setCode(newCode);
+    onContentUpdate?.(newCode);
+  };
 
   const handleCopyCode = () => {
     navigator.clipboard.writeText(code);
@@ -141,7 +149,7 @@ const CodeEditor = ({ repo, file, auth }: CodeEditorProps) => {
           <Textarea
             ref={textareaRef}
             value={code}
-            onChange={(e) => setCode(e.target.value)}
+            onChange={handleCodeChange}
             className="font-mono text-sm h-full resize-none"
           />
         )}

@@ -3,11 +3,11 @@ import { useState, useRef, useEffect } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Bot, Send, Copy, MessageSquare, CornerDownLeft, Code, FileCode } from "lucide-react";
+import { Bot, Send, Copy, FileCode } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface Message {
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "system";
   content: string;
   code?: string;
 }
@@ -15,23 +15,67 @@ interface Message {
 interface GitHubAssistantProps {
   repoName: string;
   currentFile: string | null;
+  fileContent?: string | null;
 }
 
-const GitHubAssistant = ({ repoName, currentFile }: GitHubAssistantProps) => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: "assistant",
-      content: `Hello! I'm your GitHub assistant. I can help you make changes to the ${repoName || "repository"} and generate code for new components or pages. How can I assist you today?`,
-    },
-  ]);
+const GitHubAssistant = ({ repoName, currentFile, fileContent }: GitHubAssistantProps) => {
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [apiKey, setApiKey] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Initialize with system message when component mounts or when context changes
+  useEffect(() => {
+    const systemMessage: Message = {
+      role: "system",
+      content: `You are an expert code editor and GitHub assistant for the ${repoName || "repository"}. 
+You can help users make changes to their code, generate new components, refactor existing code, and provide best practices.
+You'll have access to the current file content to provide contextual assistance.
+Keep your answers focused on programming, technical solutions, and React/TypeScript best practices.
+The repository you're helping with is: ${repoName || "Not specified"}.
+${currentFile ? `The current file you're working with is: ${currentFile}` : "No file is currently selected."}`,
+    };
+
+    const welcomeMessage: Message = {
+      role: "assistant",
+      content: `Hello! I'm your GitHub code assistant, ready to help with ${repoName || "your repository"}. ${
+        currentFile 
+          ? `I can see you're looking at \`${currentFile}\`. How can I help you modify or understand this file?` 
+          : "Select a file from the repository explorer, and I can help you understand or modify it."
+      }`,
+    };
+
+    setMessages([systemMessage, welcomeMessage]);
+  }, [repoName, currentFile]);
+
+  // Load API key from localStorage
+  useEffect(() => {
+    const savedApiKey = localStorage.getItem("openai_api_key");
+    if (savedApiKey) {
+      setApiKey(savedApiKey);
+    }
+  }, []);
 
   // Scroll to bottom when messages change
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Effect to update system message when file content changes
+  useEffect(() => {
+    if (fileContent && messages.length > 0) {
+      // Update the system message with file content
+      const updatedMessages = [...messages];
+      if (updatedMessages[0].role === "system") {
+        updatedMessages[0] = {
+          ...updatedMessages[0],
+          content: `${updatedMessages[0].content}\n\nCurrent file content:\n\`\`\`${currentFile?.split('.').pop() || 'tsx'}\n${fileContent}\n\`\`\``,
+        };
+        setMessages(updatedMessages);
+      }
+    }
+  }, [fileContent, currentFile]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -96,61 +140,93 @@ export default ${pageName};`;
 
     // Add user message
     const userMessage: Message = { role: "user", content: input.trim() };
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages((prev) => prev.filter(msg => msg.role !== "system").concat([userMessage]));
     setInput("");
     setIsLoading(true);
 
     try {
-      // Simulate AI processing (in a real app, this would call an API)
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Generate a response based on the current context
-      let response = "";
-      let code: string | undefined = undefined;
-      
-      // Check for component generation requests
+      // Check for component generation requests first (without LLM)
       const componentMatch = input.match(/generate(?:\sa)?(?:\sreact)?(?:\scomponent)?\s+(?:called|named)?\s*([A-Z][a-zA-Z]+)/i);
       const pageMatch = input.match(/generate(?:\sa)?(?:\sreact)?(?:\spage)?\s+(?:called|named)?\s*([A-Z][a-zA-Z]+)/i);
       
-      if (input.toLowerCase().includes("generate") && input.toLowerCase().includes("component")) {
-        const componentName = componentMatch ? componentMatch[1] : "NewComponent";
-        code = generateReactComponent(componentName);
-        response = `Here's a basic React component named ${componentName}. You can copy this code and save it to a new file called ${componentName}.tsx:`;
+      if (input.toLowerCase().includes("generate") && input.toLowerCase().includes("component") && componentMatch) {
+        const componentName = componentMatch[1];
+        const code = generateReactComponent(componentName);
+        const response = `Here's a basic React component named ${componentName}. You can copy this code and save it to a new file called ${componentName}.tsx:`;
+        
+        const assistantMessage: Message = { role: "assistant", content: response, code };
+        setMessages((prev) => prev.filter(msg => msg.role !== "system").concat([assistantMessage]));
       }
-      else if (input.toLowerCase().includes("generate") && input.toLowerCase().includes("page")) {
-        const pageName = pageMatch ? pageMatch[1] : "NewPage";
-        code = generateReactPage(pageName);
-        response = `Here's a basic React page named ${pageName}. You can copy this code and save it to a new file called ${pageName}.tsx in your pages directory:`;
+      else if (input.toLowerCase().includes("generate") && input.toLowerCase().includes("page") && pageMatch) {
+        const pageName = pageMatch[1];
+        const code = generateReactPage(pageName);
+        const response = `Here's a basic React page named ${pageName}. You can copy this code and save it to a new file called ${pageName}.tsx in your pages directory:`;
+        
+        const assistantMessage: Message = { role: "assistant", content: response, code };
+        setMessages((prev) => prev.filter(msg => msg.role !== "system").concat([assistantMessage]));
       }
-      else if (input.toLowerCase().includes("change") || input.toLowerCase().includes("modify") || input.toLowerCase().includes("update")) {
-        if (currentFile) {
-          response = `To change the ${currentFile} file:\n\n1. Make your changes in the editor\n2. Click the Save button at the top\n3. Add a meaningful commit message\n4. Confirm the changes`;
-        } else {
-          response = "Please select a file from the repository explorer first, then I can help you make changes to it.";
+      else if (apiKey) {
+        // Use LLM for more complex requests
+        const systemMessage = messages.find(msg => msg.role === "system");
+        const messagesToSend = systemMessage ? [systemMessage] : [];
+        
+        // Add only the last 10 messages to avoid token limits
+        const conversationMessages = messages
+          .filter(msg => msg.role !== "system")
+          .slice(-10);
+        
+        messagesToSend.push(...conversationMessages);
+        messagesToSend.push(userMessage);
+        
+        const response = await chatWithLLM(messagesToSend, apiKey);
+        
+        // Check if response contains code block
+        let content = response;
+        let code: string | undefined = undefined;
+        
+        // Extract code blocks if present
+        const codeBlockRegex = /```(?:jsx|tsx|javascript|typescript|js|ts)?\s*\n([\s\S]*?)```/g;
+        const matches = [...response.matchAll(codeBlockRegex)];
+        
+        if (matches.length > 0) {
+          // Get the largest code block
+          const largestMatch = matches.reduce((largest, current) => 
+            current[1].length > largest[1].length ? current : largest
+          , matches[0]);
+          
+          code = largestMatch[1].trim();
+          
+          // Remove the code block from the content
+          content = response.replace(codeBlockRegex, '').trim();
+          
+          if (!content) {
+            content = "Here's the code you requested:";
+          }
         }
-      } else if (input.toLowerCase().includes("add") || input.toLowerCase().includes("create")) {
-        if (input.toLowerCase().includes("component")) {
-          const componentName = "MyComponent";
-          code = generateReactComponent(componentName);
-          response = `Here's a template for a new React component. You can customize it as needed:`;
-        } else if (input.toLowerCase().includes("page")) {
-          const pageName = "MyPage";
-          code = generateReactPage(pageName);
-          response = `Here's a template for a new React page. Remember to add it to your router configuration:`;
-        } else {
-          response = "To add a new file:\n\n1. This is currently not supported in the editor, but you can:\n   - Clone the repository locally\n   - Add the file\n   - Push the changes\n   - Refresh the repository in this interface";
-        }
-      } else if (input.toLowerCase().includes("delete") || input.toLowerCase().includes("remove")) {
-        response = "File deletion is not currently supported in this interface. You can:\n\n1. Clone the repository locally\n2. Delete the file\n3. Push the changes\n4. Refresh the repository in this interface";
-      } else if (input.toLowerCase().includes("hello") || input.toLowerCase().includes("hi")) {
-        response = `Hello! I'm your GitHub assistant. I can help you navigate and make changes to the ${repoName || "repository"}. I can also generate code for new React components and pages. Just ask me to generate a component or page!`;
+        
+        const assistantMessage: Message = { role: "assistant", content, code };
+        setMessages((prev) => prev.filter(msg => msg.role !== "system").concat([assistantMessage]));
       } else {
-        response = `I'm here to help you with the ${repoName || "repository"}. You can ask me to:\n\n- Generate a new React component or page\n- Make changes to a file\n- Navigate the repository\n- Save changes\n\nFor example, try asking:\n- "Generate a component called UserProfile"\n- "Generate a page called Dashboard"`;
+        // Handle case where no API key is available
+        setMessages((prev) => prev.filter(msg => msg.role !== "system").concat([{
+          role: "assistant",
+          content: "To use the AI-powered code assistant, please provide an OpenAI API key. For now, I can still generate basic components and pages for you - just ask me to generate a component or page."
+        }]));
+        
+        // Prompt user to enter API key
+        const savedApiKey = localStorage.getItem("openai_api_key");
+        if (!savedApiKey) {
+          const apiKeyPrompt = prompt("Please enter your OpenAI API key to use the AI assistant:");
+          if (apiKeyPrompt) {
+            localStorage.setItem("openai_api_key", apiKeyPrompt);
+            setApiKey(apiKeyPrompt);
+            toast({
+              title: "API Key Saved",
+              description: "Your OpenAI API key has been saved for this session.",
+            });
+          }
+        }
       }
-
-      // Add assistant message
-      const assistantMessage: Message = { role: "assistant", content: response, code };
-      setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
       console.error("Error generating response:", error);
       toast({
@@ -158,6 +234,11 @@ export default ${pageName};`;
         description: "Failed to generate a response. Please try again.",
         variant: "destructive",
       });
+      
+      setMessages((prev) => prev.filter(msg => msg.role !== "system").concat([{
+        role: "assistant",
+        content: "Sorry, I encountered an error while processing your request. Please try again or check your API key."
+      }]));
     } finally {
       setIsLoading(false);
     }
@@ -176,12 +257,32 @@ export default ${pageName};`;
       <div className="flex items-center justify-between bg-gray-50 p-2 border-b">
         <div className="flex items-center">
           <Bot size={18} className="text-vibe-purple mr-2" />
-          <h3 className="text-sm font-medium">GitHub Assistant</h3>
+          <h3 className="text-sm font-medium">GitHub Code Assistant</h3>
         </div>
+        {!apiKey && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="text-xs h-7 px-2"
+            onClick={() => {
+              const apiKeyPrompt = prompt("Enter your OpenAI API key:");
+              if (apiKeyPrompt) {
+                localStorage.setItem("openai_api_key", apiKeyPrompt);
+                setApiKey(apiKeyPrompt);
+                toast({
+                  title: "API Key Saved",
+                  description: "Your OpenAI API key has been saved for this session.",
+                });
+              }
+            }}
+          >
+            Set API Key
+          </Button>
+        )}
       </div>
 
       <div className="flex-grow overflow-y-auto p-4 space-y-4">
-        {messages.map((message, index) => (
+        {messages.filter(msg => msg.role !== "system").map((message, index) => (
           <div
             key={index}
             className={`flex ${
@@ -244,7 +345,7 @@ export default ${pageName};`;
             <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about making changes or generating components..."
+              placeholder={apiKey ? "Ask me about the code or request changes..." : "Set API key to use AI features, or ask for component generation..."}
               className="min-h-[60px] resize-none pr-10"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
@@ -254,7 +355,11 @@ export default ${pageName};`;
               }}
             />
             <div className="absolute right-3 bottom-3 text-gray-400">
-              <CornerDownLeft size={16} />
+              {isLoading ? (
+                <div className="h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <div className="text-xs border rounded px-1">⏎</div>
+              )}
             </div>
           </div>
           <Button
