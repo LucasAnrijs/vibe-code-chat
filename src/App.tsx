@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Curriculum from "./pages/Curriculum";
 import GitHubEditor from "./pages/GitHubEditor";
 import NotFound from "./pages/NotFound";
+import LearningProgress from "@/components/LearningProgress";
 
 const queryClient = new QueryClient();
 
@@ -21,6 +22,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/curriculum" element={<Curriculum />} />
           <Route path="/github-editor" element={<GitHubEditor />} />
+          <Route path="/progress" element={<LearningProgress />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
