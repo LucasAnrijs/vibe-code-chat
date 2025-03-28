@@ -1,11 +1,14 @@
 
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { Menu, X } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Menu, X, Code, BookOpen, Github } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const location = useLocation();
+
+  const isActive = (path: string) => location.pathname === path;
 
   return (
     <nav className="bg-white shadow-sm py-4 fixed top-0 left-0 right-0 z-50">
@@ -16,15 +19,33 @@ const Navbar = () => {
 
         {/* Desktop navigation */}
         <div className="hidden md:flex items-center space-x-8">
-          <Link to="/curriculum" className="text-vibe-dark hover:text-vibe-purple transition-colors">
+          <Link 
+            to="/" 
+            className={`flex items-center gap-2 text-vibe-dark hover:text-vibe-purple transition-colors ${
+              isActive("/") ? "text-vibe-purple font-medium" : ""
+            }`}
+          >
+            <Code size={18} />
+            Home
+          </Link>
+          <Link 
+            to="/curriculum" 
+            className={`flex items-center gap-2 text-vibe-dark hover:text-vibe-purple transition-colors ${
+              isActive("/curriculum") ? "text-vibe-purple font-medium" : ""
+            }`}
+          >
+            <BookOpen size={18} />
             Curriculum
           </Link>
-          <a href="#features" className="text-vibe-dark hover:text-vibe-purple transition-colors">
-            Features
-          </a>
-          <a href="#how-it-works" className="text-vibe-dark hover:text-vibe-purple transition-colors">
-            How It Works
-          </a>
+          <Link 
+            to="/github-editor" 
+            className={`flex items-center gap-2 text-vibe-dark hover:text-vibe-purple transition-colors ${
+              isActive("/github-editor") ? "text-vibe-purple font-medium" : ""
+            }`}
+          >
+            <Github size={18} />
+            GitHub Editor
+          </Link>
           <a href="#pricing" className="text-vibe-dark hover:text-vibe-purple transition-colors">
             Pricing
           </a>
@@ -53,26 +74,35 @@ const Navbar = () => {
         <div className="md:hidden px-4 py-4 bg-white border-t">
           <div className="flex flex-col space-y-3">
             <Link 
-              to="/curriculum" 
-              className="text-vibe-dark hover:text-vibe-purple transition-colors py-2"
+              to="/" 
+              className={`flex items-center gap-2 text-vibe-dark hover:text-vibe-purple transition-colors py-2 ${
+                isActive("/") ? "text-vibe-purple font-medium" : ""
+              }`}
               onClick={() => setIsMenuOpen(false)}
             >
+              <Code size={18} />
+              Home
+            </Link>
+            <Link 
+              to="/curriculum" 
+              className={`flex items-center gap-2 text-vibe-dark hover:text-vibe-purple transition-colors py-2 ${
+                isActive("/curriculum") ? "text-vibe-purple font-medium" : ""
+              }`}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              <BookOpen size={18} />
               Curriculum
             </Link>
-            <a 
-              href="#features" 
-              className="text-vibe-dark hover:text-vibe-purple transition-colors py-2"
+            <Link 
+              to="/github-editor" 
+              className={`flex items-center gap-2 text-vibe-dark hover:text-vibe-purple transition-colors py-2 ${
+                isActive("/github-editor") ? "text-vibe-purple font-medium" : ""
+              }`}
               onClick={() => setIsMenuOpen(false)}
             >
-              Features
-            </a>
-            <a 
-              href="#how-it-works" 
-              className="text-vibe-dark hover:text-vibe-purple transition-colors py-2"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              How It Works
-            </a>
+              <Github size={18} />
+              GitHub Editor
+            </Link>
             <a 
               href="#pricing" 
               className="text-vibe-dark hover:text-vibe-purple transition-colors py-2"
