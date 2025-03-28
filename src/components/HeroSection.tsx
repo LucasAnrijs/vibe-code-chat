@@ -26,38 +26,38 @@ const HeroSection = () => {
           </div>
 
           <div className="flex-1 relative">
-            <div className="bg-white rounded-xl shadow-xl border border-gray-200 p-6 max-w-md mx-auto">
+            <div className="bg-white rounded-xl shadow-xl border border-gray-200 p-6 max-w-md mx-auto lg:ml-auto transform hover:scale-105 transition-all duration-300 hover:shadow-2xl">
               <div className="flex items-center space-x-3 mb-4">
                 <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                 <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
                 <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <div className="ml-2 text-sm text-gray-500">chat.vibecode.io</div>
+                <div className="ml-2 text-sm font-medium text-gray-500">chat.vibecode.io</div>
               </div>
               
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
-                  <div className="bg-vibe-purple text-white p-2 rounded-full">
+                  <div className="bg-vibe-purple text-white p-2 rounded-full shadow-md">
                     <GraduationCap size={20} />
                   </div>
-                  <div className="bg-gray-100 rounded-lg p-3 text-sm max-w-[80%]">
+                  <div className="bg-gray-100 rounded-lg p-3 text-sm max-w-[80%] shadow-sm">
                     Let&apos;s learn how to create a function in JavaScript. What&apos;s your coding experience?
                   </div>
                 </div>
                 
                 <div className="flex items-start gap-3 justify-end">
-                  <div className="bg-gray-100 rounded-lg p-3 text-sm max-w-[80%]">
+                  <div className="bg-gray-100 rounded-lg p-3 text-sm max-w-[80%] shadow-sm">
                     I&apos;m a beginner. I&apos;ve done some HTML and CSS but JavaScript feels intimidating.
                   </div>
-                  <div className="bg-gray-200 text-gray-800 p-2 rounded-full">
+                  <div className="bg-gray-200 text-gray-800 p-2 rounded-full shadow-md">
                     <MessageCircle size={20} />
                   </div>
                 </div>
                 
                 <div className="flex items-start gap-3">
-                  <div className="bg-vibe-purple text-white p-2 rounded-full">
+                  <div className="bg-vibe-purple text-white p-2 rounded-full shadow-md">
                     <GraduationCap size={20} />
                   </div>
-                  <div className="bg-gray-100 rounded-lg p-3 text-sm max-w-[80%]">
+                  <div className="bg-gray-100 rounded-lg p-3 text-sm max-w-[80%] shadow-sm">
                     No worries! Let&apos;s start with the basics. Here&apos;s a simple function:
                     <pre className="bg-gray-800 text-green-400 p-2 rounded mt-2 overflow-x-auto">
                       function sayHello() {'{'}
@@ -69,7 +69,7 @@ const HeroSection = () => {
                 </div>
                 
                 <div className="relative">
-                  <div className="h-10 bg-gray-100 rounded-full flex items-center pl-4 pr-12">
+                  <div className="h-10 bg-gray-100 rounded-full flex items-center pl-4 pr-12 shadow-inner">
                     <div className="animate-typing overflow-hidden whitespace-nowrap border-r-2 border-gray-500 pr-1">
                       How do I call this function?
                     </div>
@@ -79,7 +79,14 @@ const HeroSection = () => {
                   </button>
                 </div>
               </div>
+              
+              <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 bg-vibe-purple text-white px-4 py-1 rounded-full text-sm font-medium shadow-lg">
+                Interactive Live Demo
+              </div>
             </div>
+            
+            <div className="hidden lg:block absolute -z-10 right-5 -bottom-10 w-64 h-64 bg-purple-100 rounded-full blur-3xl opacity-70"></div>
+            <div className="hidden lg:block absolute -z-10 right-20 -top-10 w-64 h-64 bg-blue-100 rounded-full blur-3xl opacity-70"></div>
           </div>
         </div>
       </div>

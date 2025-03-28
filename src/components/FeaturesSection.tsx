@@ -51,12 +51,18 @@ const FeaturesSection = () => {
           {features.map((feature, index) => (
             <div 
               key={index} 
-              className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
+              className={`bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow ${index === 0 ? 'ring-2 ring-vibe-purple scale-105 shadow-md' : ''}`}
             >
-              <div className="bg-purple-50 p-3 rounded-lg inline-block mb-4">
-                {feature.icon}
+              <div className={`${index === 0 ? 'bg-vibe-purple p-3 rounded-lg inline-block mb-4' : 'bg-purple-50 p-3 rounded-lg inline-block mb-4'}`}>
+                {index === 0 ? 
+                  <MessageCircle className="h-6 w-6 text-white" /> :
+                  feature.icon
+                }
               </div>
-              <h3 className="text-xl font-semibold text-vibe-dark mb-3">{feature.title}</h3>
+              <h3 className={`text-xl font-semibold ${index === 0 ? 'text-vibe-purple' : 'text-vibe-dark'} mb-3`}>
+                {feature.title}
+                {index === 0 && <span className="ml-2 text-xs bg-purple-100 text-vibe-purple px-2 py-1 rounded-full">Core Feature</span>}
+              </h3>
               <p className="text-gray-600">{feature.description}</p>
             </div>
           ))}
