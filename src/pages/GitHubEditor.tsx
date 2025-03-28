@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -52,12 +51,10 @@ const GitHubEditor = () => {
     },
   });
 
-  // Load token from localStorage on initial load
   useEffect(() => {
     const savedToken = localStorage.getItem(STORAGE_TOKEN_KEY);
     if (savedToken) {
       setAuth({ token: savedToken });
-      // Fetch username if token exists
       fetchUsername(savedToken);
     }
   }, []);
@@ -99,11 +96,9 @@ const GitHubEditor = () => {
     try {
       const { token } = values;
       
-      // Test if token is valid by getting user info
       const userInfo = await getUserInfo({ token });
       
       if (userInfo) {
-        // Save token to localStorage
         localStorage.setItem(STORAGE_TOKEN_KEY, token);
         setAuth({ token, username: userInfo.login });
         setShowAuthDialog(false);
@@ -138,12 +133,12 @@ const GitHubEditor = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col overflow-auto">
       <Navbar />
       
-      <main className="flex-grow pt-20">
-        <div className="container mx-auto px-4 py-8">
-          <div className="max-w-6xl mx-auto">
+      <main className="flex-grow pt-20 overflow-auto">
+        <div className="container mx-auto px-4 py-8 overflow-auto">
+          <div className="max-w-6xl mx-auto overflow-auto">
             <div className="mb-8">
               <div className="flex justify-between items-center mb-2">
                 <h1 className="text-3xl font-bold">GitHub Repository Editor</h1>
@@ -222,8 +217,8 @@ const GitHubEditor = () => {
             </div>
             
             {repo && (
-              <div className={`grid gap-6 h-[70vh] ${showAssistant ? 'grid-cols-1 md:grid-cols-4' : 'grid-cols-1 md:grid-cols-3'}`}>
-                <div className="md:col-span-1">
+              <div className={`grid gap-6 h-[70vh] overflow-auto ${showAssistant ? 'grid-cols-1 md:grid-cols-4' : 'grid-cols-1 md:grid-cols-3'}`}>
+                <div className="md:col-span-1 overflow-auto">
                   <RepoExplorer 
                     repo={repo} 
                     onFileSelect={handleFileSelect}
@@ -231,7 +226,7 @@ const GitHubEditor = () => {
                   />
                 </div>
                 
-                <div className={`${showAssistant ? 'md:col-span-2' : 'md:col-span-2'}`}>
+                <div className={`${showAssistant ? 'md:col-span-2' : 'md:col-span-2'} overflow-auto`}>
                   <CodeEditor 
                     repo={repo} 
                     file={selectedFile}
@@ -240,7 +235,7 @@ const GitHubEditor = () => {
                 </div>
                 
                 {showAssistant && (
-                  <div className="md:col-span-1">
+                  <div className="md:col-span-1 overflow-auto">
                     <GitHubAssistant 
                       repoName={repo ? `${repo.owner}/${repo.repo}` : ""} 
                       currentFile={selectedFile?.name || null}
