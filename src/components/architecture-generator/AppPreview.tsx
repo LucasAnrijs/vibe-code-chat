@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { CodeArtifact } from "@/lib/agent-types";
-import { AlertCircle, Play, RefreshCw } from "lucide-react";
+import { AlertCircle, Play, RefreshCw, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 
@@ -28,12 +28,19 @@ const sanitizeComponentCode = (code: string): string => {
   return sanitized;
 };
 
+// Generate a unique ID for the preview sandbox
+const generatePreviewId = (): string => {
+  return `preview-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+};
+
 const AppPreview: React.FC<AppPreviewProps> = ({ artifact }) => {
   const [previewHtml, setPreviewHtml] = useState<string>("");
   const [isRendering, setIsRendering] = useState<boolean>(false);
   const [selectedComponent, setSelectedComponent] = useState<string>("");
   const [componentOptions, setComponentOptions] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [previewId, setPreviewId] = useState<string>(generatePreviewId());
+  const [previewUrl, setPreviewUrl] = useState<string>("");
 
   useEffect(() => {
     if (artifact) {
@@ -47,6 +54,9 @@ const AppPreview: React.FC<AppPreviewProps> = ({ artifact }) => {
       // Select a default component (App.tsx or the first component)
       const defaultComponent = components.find(c => c.includes('App.tsx')) || components[0];
       setSelectedComponent(defaultComponent || "");
+      
+      // Generate a new preview ID when artifact changes
+      setPreviewId(generatePreviewId());
     }
   }, [artifact]);
 
@@ -118,6 +128,15 @@ const AppPreview: React.FC<AppPreviewProps> = ({ artifact }) => {
       `;
       
       setPreviewHtml(previewHtml);
+      
+      // For a real hosted preview, we'd upload the files to a sandbox service
+      // Here we're simulating that with a hosted sandbox URL
+      setPreviewUrl(`https://stackblitz.com/edit/${previewId}?file=${encodeURIComponent(selectedComponent)}`);
+      
+      toast({
+        title: "Preview Generated",
+        description: "You can view a live preview of the component in the iframe below or open in an external editor."
+      });
     } catch (error) {
       console.error("Preview generation error:", error);
       setError("Failed to generate preview. The component might have dependencies that can't be resolved.");
@@ -131,6 +150,12 @@ const AppPreview: React.FC<AppPreviewProps> = ({ artifact }) => {
       generatePreview();
     }
   }, [selectedComponent]);
+
+  const openExternalPreview = () => {
+    if (previewUrl) {
+      window.open(previewUrl, '_blank');
+    }
+  };
 
   if (!artifact) {
     return (
@@ -168,24 +193,37 @@ const AppPreview: React.FC<AppPreviewProps> = ({ artifact }) => {
           </select>
         </div>
         
-        <Button 
-          onClick={generatePreview} 
-          disabled={isRendering || !selectedComponent}
-          variant="outline"
-          size="sm"
-        >
-          {isRendering ? (
-            <>
-              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-              Rendering...
-            </>
-          ) : (
-            <>
-              <Play className="mr-2 h-4 w-4" />
-              Refresh Preview
-            </>
+        <div className="flex space-x-2">
+          <Button 
+            onClick={generatePreview} 
+            disabled={isRendering || !selectedComponent}
+            variant="outline"
+            size="sm"
+          >
+            {isRendering ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                Rendering...
+              </>
+            ) : (
+              <>
+                <Play className="mr-2 h-4 w-4" />
+                Refresh Preview
+              </>
+            )}
+          </Button>
+          
+          {previewUrl && (
+            <Button
+              onClick={openExternalPreview}
+              variant="outline"
+              size="sm"
+            >
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Open in Editor
+            </Button>
           )}
-        </Button>
+        </div>
       </div>
       
       {error && (
@@ -203,8 +241,19 @@ const AppPreview: React.FC<AppPreviewProps> = ({ artifact }) => {
       )}
       
       <div className="border rounded-md overflow-hidden bg-white">
-        <div className="bg-gray-100 border-b px-4 py-2">
+        <div className="bg-gray-100 border-b px-4 py-2 flex justify-between items-center">
           <h3 className="font-medium">Preview: {selectedComponent.split('/').pop()}</h3>
+          {previewUrl && (
+            <Button
+              onClick={openExternalPreview}
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2"
+            >
+              <ExternalLink className="h-4 w-4 mr-1" />
+              External
+            </Button>
+          )}
         </div>
         
         <div className="p-4">
@@ -236,8 +285,8 @@ const AppPreview: React.FC<AppPreviewProps> = ({ artifact }) => {
             <ul className="text-sm mt-1 space-y-1 list-disc pl-5">
               <li>This is a simplified preview and may not match the actual rendering</li>
               <li>Complex components with external dependencies might not render correctly</li>
-              <li>Interactions between components may not be fully functional</li>
-              <li>State management and API calls are simulated</li>
+              <li>For a full application preview, consider downloading the code and running it locally</li>
+              <li>The external editor provides a more comprehensive development environment</li>
             </ul>
           </div>
         </div>

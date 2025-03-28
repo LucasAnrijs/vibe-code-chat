@@ -39,6 +39,23 @@ class PromptEngineeringService {
       // code
       \`\`\`
     `,
+    implementation_with_context: `
+      Generate implementation for this file:
+      {{context}}
+      
+      Previously generated files:
+      {{filesContext}}
+      
+      Constraints: {{constraints}}
+      
+      Ensure type safety and best practices.
+      Use TypeScript for all implementation.
+      Make sure this file integrates properly with previously generated files.
+      
+      Format the file with \`\`\`typescript filename.ts
+      // code
+      \`\`\`
+    `,
     validation: `
       Validate the following implementation:
       {{context}}
@@ -55,9 +72,20 @@ class PromptEngineeringService {
 
   composePrompt(blueprint: PromptBlueprint): string {
     const template = this.templates[blueprint.stage];
-    return template
-      .replace('{{context}}', blueprint.context)
-      .replace('{{constraints}}', JSON.stringify(blueprint.constraints));
+    let processedTemplate = template
+      .replace('{{context}}', blueprint.context);
+      
+    if (blueprint.constraints) {
+      processedTemplate = processedTemplate
+        .replace('{{constraints}}', JSON.stringify(blueprint.constraints));
+    }
+    
+    if (blueprint.constraints && blueprint.constraints.filesContext) {
+      processedTemplate = processedTemplate
+        .replace('{{filesContext}}', blueprint.constraints.filesContext as string);
+    }
+    
+    return processedTemplate;
   }
 }
 
@@ -229,6 +257,9 @@ export class CodeGenerationService {
         .map(line => line.trim())
         .filter(line => line.length > 0 && !line.startsWith('#') && !line.startsWith('//'));
       
+      // Organize by file paths for logical generation order
+      const filePaths = this.organizeFilePathsByHierarchy(lines);
+      
       const files: Record<string, string> = {};
       
       // Get database schema if available
@@ -240,43 +271,55 @@ export class CodeGenerationService {
         await this.generateDatabaseFiles(databaseSchema, databaseType, files);
       }
       
-      // Process each architecture line
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        
-        // Skip empty lines
-        if (!line.trim()) continue;
+      // Track generation progress
+      let completedFiles = 0;
+      const totalFiles = filePaths.length;
+      
+      toast({
+        title: "Starting File Generation",
+        description: `Generating ${totalFiles} files from architecture...`,
+      });
+      
+      // Process files in order
+      for (const filePath of filePaths) {
+        // Skip empty paths
+        if (!filePath.trim()) continue;
         
         // Skip database files that we've already generated
-        if ((line.includes('/db/') || line.includes('/prisma/')) && databaseSchema) {
+        if ((filePath.includes('/db/') || filePath.includes('/prisma/')) && databaseSchema) {
           continue;
         }
         
         const result = await this.circuitBreaker.execute(async () => {
+          // Create context from previously generated files
+          const filesContext = this.createFilesContext(files, filePath);
+          
           // Add database context to the blueprint if we have schema
           const dbContext = databaseSchema ? 
             `\n\nDatabase Schema: ${databaseSchema}\nDatabase Type: ${databaseType}` : '';
             
           const blueprint: PromptBlueprint = {
-            context: `Architecture line: ${line}\n\nFull context: ${architecture}${dbContext}`,
-            stage: 'implementation',
+            context: `Generate file: ${filePath}\n\nFull architecture context: ${architecture}${dbContext}`,
+            stage: 'implementation_with_context',
             requirements: [],
             constraints: {
-              line: i + 1,
-              totalLines: lines.length,
+              filePath: filePath,
+              totalFiles: totalFiles,
+              completedFiles: completedFiles,
               additionalConstraints: constraints,
               databaseType: databaseType,
-              hasDatabaseSchema: !!databaseSchema
+              hasDatabaseSchema: !!databaseSchema,
+              filesContext: filesContext
             }
           };
           
-          const prompt = this.promptService.composePrompt(blueprint);
+          completedFiles++;
           
           for (const provider of this.providers) {
             try {
               toast({
                 title: "Generating File",
-                description: `Processing architecture line ${i + 1}/${lines.length}`,
+                description: `Processing ${filePath} (${completedFiles}/${totalFiles})`,
               });
               
               const generationStream = provider.generate(blueprint);
@@ -296,7 +339,7 @@ export class CodeGenerationService {
                 return true;
               }
             } catch (error) {
-              console.warn(`Provider ${provider.constructor.name} failed for line ${i + 1}:`, error);
+              console.warn(`Provider ${provider.constructor.name} failed for file ${filePath}:`, error);
             }
           }
           
@@ -306,7 +349,7 @@ export class CodeGenerationService {
         if (!result) {
           toast({
             title: "Generation Failed",
-            description: `Failed to generate code for line ${i + 1}: ${line}`,
+            description: `Failed to generate code for: ${filePath}`,
             variant: "destructive"
           });
         }
@@ -320,6 +363,11 @@ export class CodeGenerationService {
         });
         return null;
       }
+      
+      toast({
+        title: "Generation Complete",
+        description: `Successfully generated ${Object.keys(files).length} files`,
+      });
       
       return {
         files,
@@ -338,6 +386,103 @@ export class CodeGenerationService {
       });
       return null;
     }
+  }
+
+  /**
+   * Creates context from previously generated files to help with coherent generation
+   */
+  private createFilesContext(files: Record<string, string>, currentFilePath: string): string {
+    if (Object.keys(files).length === 0) {
+      return "No files generated yet.";
+    }
+    
+    // Get related files based on path similarity
+    const currentDir = currentFilePath.includes('/') 
+      ? currentFilePath.substring(0, currentFilePath.lastIndexOf('/')) 
+      : '';
+    
+    // Find related files in the same directory or parent directories
+    const relatedFiles: string[] = [];
+    
+    // First add type definitions if the file is a component
+    const typeFiles = Object.keys(files).filter(path => 
+      path.includes('types.ts') || path.includes('.d.ts')
+    );
+    
+    // Then add files from the same directory
+    const sameDirectoryFiles = Object.keys(files).filter(path => {
+      const fileDir = path.includes('/') 
+        ? path.substring(0, path.lastIndexOf('/')) 
+        : '';
+      return fileDir === currentDir;
+    });
+    
+    // Get utility or shared files
+    const utilityFiles = Object.keys(files).filter(path => 
+      path.includes('/utils/') || path.includes('/lib/') || path.includes('/hooks/')
+    );
+    
+    // Combine and remove duplicates
+    const combinedFiles = [...typeFiles, ...sameDirectoryFiles, ...utilityFiles];
+    const uniqueFiles = [...new Set(combinedFiles)];
+    
+    // Limit to 5 most relevant files to avoid token limits
+    const contextFiles = uniqueFiles.slice(0, 5);
+    
+    let context = `Previously generated files (${contextFiles.length}/${Object.keys(files).length} shown):\n\n`;
+    
+    for (const file of contextFiles) {
+      context += `File: ${file}\n\`\`\`typescript\n${files[file]}\n\`\`\`\n\n`;
+    }
+    
+    return context;
+  }
+
+  /**
+   * Organizes file paths in a logical generation order
+   */
+  private organizeFilePathsByHierarchy(lines: string[]): string[] {
+    // Group files by type for logical ordering
+    const configFiles: string[] = [];
+    const typeFiles: string[] = [];
+    const utilityFiles: string[] = [];
+    const hookFiles: string[] = [];
+    const componentFiles: string[] = [];
+    const pageFiles: string[] = [];
+    const otherFiles: string[] = [];
+    
+    for (const line of lines) {
+      // Clean up the line
+      const filePath = line.replace(/├─|└─|│\s+/g, '').trim();
+      
+      // Categorize files
+      if (filePath.includes('/config/') || filePath.endsWith('.config.ts')) {
+        configFiles.push(filePath);
+      } else if (filePath.includes('types.ts') || filePath.includes('.d.ts')) {
+        typeFiles.push(filePath);
+      } else if (filePath.includes('/utils/') || filePath.includes('/lib/')) {
+        utilityFiles.push(filePath);
+      } else if (filePath.includes('/hooks/')) {
+        hookFiles.push(filePath);
+      } else if (filePath.includes('/components/')) {
+        componentFiles.push(filePath);
+      } else if (filePath.includes('/pages/')) {
+        pageFiles.push(filePath);
+      } else {
+        otherFiles.push(filePath);
+      }
+    }
+    
+    // Return files in logical generation order
+    return [
+      ...configFiles,
+      ...typeFiles,
+      ...utilityFiles,
+      ...hookFiles,
+      ...componentFiles,
+      ...pageFiles,
+      ...otherFiles
+    ];
   }
 
   private async generateDatabaseFiles(
