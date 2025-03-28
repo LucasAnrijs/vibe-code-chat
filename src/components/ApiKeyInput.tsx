@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 
 interface ApiKeyInputProps {
   onApiKeySubmit: (apiKey: string) => void;
@@ -16,12 +16,15 @@ const ApiKeyInput = ({ onApiKeySubmit }: ApiKeyInputProps) => {
     e.preventDefault();
     if (apiKey.trim()) {
       onApiKeySubmit(apiKey.trim());
-      toast.success("API key saved. You can now chat with the AI!");
+      toast({
+        title: "API Key Saved",
+        description: "Your OpenAI API key has been saved for this session.",
+      });
     }
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-md p-4 mb-4">
+    <div className="bg-white rounded-xl shadow-sm p-4">
       <h3 className="text-sm font-medium mb-2">Enter your OpenAI API Key</h3>
       <p className="text-xs text-gray-500 mb-3">
         Your API key is stored locally in your browser and never sent to our servers.

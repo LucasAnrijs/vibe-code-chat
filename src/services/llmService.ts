@@ -37,7 +37,11 @@ export const chatWithLLM = async (
     return data.choices[0].message.content;
   } catch (error) {
     console.error("LLM API error:", error);
-    toast.error("Failed to get a response from the AI");
+    toast({
+      title: "API Error",
+      description: "Failed to get a response from the AI",
+      variant: "destructive"
+    });
     return "Sorry, I encountered an error. Please try again later or check your API key.";
   }
 };

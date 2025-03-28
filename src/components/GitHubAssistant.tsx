@@ -3,8 +3,10 @@ import { useState, useRef, useEffect } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Bot, Send, Copy, FileCode } from "lucide-react";
+import { Bot, Send, Copy, FileCode, Key } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { chatWithLLM, ChatMessage } from "@/services/llmService";
+import ApiKeyInput from "@/components/ApiKeyInput";
 
 interface Message {
   role: "user" | "assistant" | "system";
@@ -23,6 +25,7 @@ const GitHubAssistant = ({ repoName, currentFile, fileContent }: GitHubAssistant
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [apiKey, setApiKey] = useState<string | null>(null);
+  const [showApiKeyInput, setShowApiKeyInput] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Initialize with system message when component mounts or when context changes
@@ -54,6 +57,8 @@ ${currentFile ? `The current file you're working with is: ${currentFile}` : "No 
     const savedApiKey = localStorage.getItem("openai_api_key");
     if (savedApiKey) {
       setApiKey(savedApiKey);
+    } else {
+      setShowApiKeyInput(true);
     }
   }, []);
 
@@ -79,6 +84,16 @@ ${currentFile ? `The current file you're working with is: ${currentFile}` : "No 
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const handleApiKeySubmit = (key: string) => {
+    localStorage.setItem("openai_api_key", key);
+    setApiKey(key);
+    setShowApiKeyInput(false);
+    toast({
+      title: "API Key Saved",
+      description: "Your OpenAI API key has been saved for this session.",
+    });
   };
 
   const generateReactComponent = (componentName: string): string => {
@@ -178,7 +193,13 @@ export default ${pageName};`;
         messagesToSend.push(...conversationMessages);
         messagesToSend.push(userMessage);
         
-        const response = await chatWithLLM(messagesToSend, apiKey);
+        // Convert our internal message format to the format expected by the llmService
+        const chatMessages: ChatMessage[] = messagesToSend.map(msg => ({
+          role: msg.role,
+          content: msg.content
+        }));
+        
+        const response = await chatWithLLM(chatMessages, apiKey);
         
         // Check if response contains code block
         let content = response;
@@ -213,25 +234,14 @@ export default ${pageName};`;
           content: "To use the AI-powered code assistant, please provide an OpenAI API key. For now, I can still generate basic components and pages for you - just ask me to generate a component or page."
         }]));
         
-        // Prompt user to enter API key
-        const savedApiKey = localStorage.getItem("openai_api_key");
-        if (!savedApiKey) {
-          const apiKeyPrompt = prompt("Please enter your OpenAI API key to use the AI assistant:");
-          if (apiKeyPrompt) {
-            localStorage.setItem("openai_api_key", apiKeyPrompt);
-            setApiKey(apiKeyPrompt);
-            toast({
-              title: "API Key Saved",
-              description: "Your OpenAI API key has been saved for this session.",
-            });
-          }
-        }
+        // Show API key input form
+        setShowApiKeyInput(true);
       }
     } catch (error) {
       console.error("Error generating response:", error);
       toast({
         title: "Error",
-        description: "Failed to generate a response. Please try again.",
+        description: "Failed to generate a response. Please try again or check your API key.",
         variant: "destructive",
       });
       
@@ -259,27 +269,34 @@ export default ${pageName};`;
           <Bot size={18} className="text-vibe-purple mr-2" />
           <h3 className="text-sm font-medium">GitHub Code Assistant</h3>
         </div>
-        {!apiKey && (
+        {apiKey ? (
           <Button 
             variant="outline" 
             size="sm" 
             className="text-xs h-7 px-2"
-            onClick={() => {
-              const apiKeyPrompt = prompt("Enter your OpenAI API key:");
-              if (apiKeyPrompt) {
-                localStorage.setItem("openai_api_key", apiKeyPrompt);
-                setApiKey(apiKeyPrompt);
-                toast({
-                  title: "API Key Saved",
-                  description: "Your OpenAI API key has been saved for this session.",
-                });
-              }
-            }}
+            onClick={() => setShowApiKeyInput(!showApiKeyInput)}
           >
+            <Key size={14} className="mr-1" />
+            Change API Key
+          </Button>
+        ) : !showApiKeyInput && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="text-xs h-7 px-2"
+            onClick={() => setShowApiKeyInput(true)}
+          >
+            <Key size={14} className="mr-1" />
             Set API Key
           </Button>
         )}
       </div>
+
+      {showApiKeyInput && (
+        <div className="p-4 border-b">
+          <ApiKeyInput onApiKeySubmit={handleApiKeySubmit} />
+        </div>
+      )}
 
       <div className="flex-grow overflow-y-auto p-4 space-y-4">
         {messages.filter(msg => msg.role !== "system").map((message, index) => (
